@@ -1,14 +1,17 @@
 src_dir=$(shell pwd)
 seetaface_dir=$(src_dir)/../SeetaFace6Open
 
+SeetaFace6Warp=SeetaFace6Warp
+out_path=../lib
+
 .PHONY:lib
 
 lib:
 	echo $(seetaface_dir)/build/include/
-	cd SeetaFace6Warp && g++ -std=c++11 FaceTracker_warp.cpp -fPIC -shared -o libfaced.so \
+	cd SeetaFace6Warp && g++ -std=c++11 *.cpp -fPIC -shared -o $(out_path)/$(SeetaFace6Warp).so \
 		-I$(seetaface_dir)/build/include/ \
 		-L$(seetaface_dir)/build/lib64/ \
-		-lSeetaFaceTracking600
+		-lSeetaFaceTracking600 -lSeetaFaceDetector600 -lSeetaFaceLandmarker600 -lSeetaFaceRecognizer610
 
 #输出后手动执行
 env:
@@ -19,13 +22,19 @@ bin:
 	cd test && go build -v
 
 
+
 #========== MSVC ==========
+seetaface_dir_win=$(sehll cd)
 seetaface6_lib_path=D:\code\seetaface6-master\seetaface6-master\build-2\lib\x64
-seetaface6_inc_path=D:\code\seetaface6-master\seetaface6-master\build-2\include
-out_path=../lib
+seetaface6_inc_path=$(seetaface_dir_win)\seetaFace6Warp
+
 dll:
 	echo $(seetaface_dir_win)
-	cd seetaFace6Warp && cl /EHsc /LD FaceTracker_warp.cpp /I$(seetaface6_inc_path) /link /LIBPATH:$(seetaface6_lib_path) SeetaFaceTracking600.lib /out:$(out_path)/FaceTracker_warp.dll /implib:$(out_path)/FaceTracker_warp.lib
+	cd seetaFace6Warp && cl /EHsc /LD *.cpp /I$(seetaface6_inc_path) /link /LIBPATH:$(seetaface6_lib_path) \
+	SeetaFaceTracking600.lib SeetaFaceLandmarker600.lib SeetaFaceDetector600.lib SeetaFaceRecognizer610.lib \
+	/out:$(out_path)/$(SeetaFace6Warp).dll /implib:$(out_path)/$(SeetaFace6Warp).lib
+
+
 
 run:
 	cd test && go build -o ../lib/test.exe . && ..\lib\test.exe -path1 duo6.jpeg -path2 duo5.jpeg
