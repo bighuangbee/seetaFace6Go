@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-// #cgo CFLAGS: -I./libSf6
+// #cgo CFLAGS: -I./seetaFace6Warp
 // #cgo LDFLAGS: -L./lib -lFaceTracker_warp -LD:/code/seetaface6-master/seetaface6-master/build-2/bin/x64 -ltennis
 // #include <stdlib.h>
 // #include "FaceTracker_warp.h"

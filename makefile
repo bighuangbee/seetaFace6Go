@@ -1,9 +1,11 @@
 src_dir=$(shell pwd)
 seetaface_dir=$(src_dir)/../SeetaFace6Open
 
+.PHONY:lib
+
 lib:
 	echo $(seetaface_dir)/build/include/
-	cd libSf6 && g++ -std=c++11 FaceTracker_warp.cpp -fPIC -shared -o libfaced.so \
+	cd SeetaFace6Warp && g++ -std=c++11 FaceTracker_warp.cpp -fPIC -shared -o libfaced.so \
 		-I$(seetaface_dir)/build/include/ \
 		-L$(seetaface_dir)/build/lib64/ \
 		-lSeetaFaceTracking600

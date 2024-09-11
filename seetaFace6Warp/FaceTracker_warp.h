@@ -2,7 +2,6 @@
 
 #include "CStruct.h"
 
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -14,11 +13,10 @@ extern "C"
         float score;
     } SeetaFaceInfo;
 
- typedef struct SeetaTrackingFaceInfo
+    typedef struct SeetaTrackingFaceInfo
     {
         SeetaRect pos;
         float score;
-
         int frame_no;
         int PID;
         int step;
@@ -35,26 +33,34 @@ extern "C"
         void *cls;
     } facetracker;
 
-    __declspec(dllexport) facetracker *facetracker_new(char *model, int video_width, int video_height);
-    __declspec(dllexport) void facetracker_free(facetracker *ft);
+    // Conditionally define dllexport for Windows
+    #ifdef _WIN32
+        #define DLLEXPORT __declspec(dllexport)
+    #else
+        #define DLLEXPORT
+    #endif
 
-    __declspec(dllexport) SeetaTrackingFaceInfoArray facetracker_Track(facetracker *ft, const SeetaImageData image);
+    DLLEXPORT facetracker *facetracker_new(char *model, int video_width, int video_height);
+    DLLEXPORT void facetracker_free(facetracker *ft);
 
-    __declspec(dllexport) void facetracker_SetMinFaceSize(facetracker *ft, int size);
+    DLLEXPORT SeetaTrackingFaceInfoArray facetracker_Track(facetracker *ft, const SeetaImageData image);
 
-    __declspec(dllexport) int facetracker_GetMinFaceSize(facetracker *ft);
+    DLLEXPORT void facetracker_SetMinFaceSize(facetracker *ft, int size);
 
-    __declspec(dllexport) void facetracker_SetThreshold(facetracker *ft, float thresh);
+    DLLEXPORT int facetracker_GetMinFaceSize(facetracker *ft);
 
-    __declspec(dllexport) float facetracker_GetThreshold(facetracker *ft);
+    DLLEXPORT void facetracker_SetThreshold(facetracker *ft, float thresh);
 
-    __declspec(dllexport) void facetracker_SetVideoStable(facetracker *ft, int stable);
-    __declspec(dllexport) int facetracker_GetVideoStable(facetracker *ft);
+    DLLEXPORT float facetracker_GetThreshold(facetracker *ft);
 
-    __declspec(dllexport) void facetracker_SetSingleCalculationThreads(facetracker *ft, int num);
+    DLLEXPORT void facetracker_SetVideoStable(facetracker *ft, int stable);
+    DLLEXPORT int facetracker_GetVideoStable(facetracker *ft);
 
-    __declspec(dllexport) void facetracker_SetInterval(facetracker *ft, int interval);
-    __declspec(dllexport) void facetracker_Reset(facetracker *ft);
+    DLLEXPORT void facetracker_SetSingleCalculationThreads(facetracker *ft, int num);
+
+    DLLEXPORT void facetracker_SetInterval(facetracker *ft, int interval);
+    DLLEXPORT void facetracker_Reset(facetracker *ft);
+
 #ifdef __cplusplus
 }
 #endif
