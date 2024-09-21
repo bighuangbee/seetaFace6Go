@@ -61,7 +61,6 @@ SeetaImageData facerecognizer_CropFaceV2(facerecognizer *fr, const SeetaImageDat
     face.channels = cls->GetCropFaceChannelsV2();
 //    unsigned char data[face.width * face.height * face.channels];
     unsigned char* data = new unsigned char[face.width * face.height * face.channels];
-
     face.data = &data[0];
     cls->CropFaceV2(image, points, face);
     return face;

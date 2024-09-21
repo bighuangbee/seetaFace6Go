@@ -7,7 +7,6 @@
 extern "C"
 {
 #endif
-    // Conditionally define dllexport for Windows
     #ifdef _WIN32
         #define DLLEXPORT __declspec(dllexport)
     #else

@@ -1,5 +1,6 @@
 #include "FaceTracker.h"
 #include "FaceTracker_warp.h"
+#include "CTrackingFaceInfo.h"
 
 #include <iostream>
 

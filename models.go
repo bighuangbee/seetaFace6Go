@@ -1,8 +1,5 @@
 package seetaFace6go
 
-// #cgo CFLAGS: -I./libSf6
-// #cgo CXXFLAGS: -std=c++11 -Wall -O3 -DNDEBUG -march=native
-// #cgo LDFLAGS: -ltennis -ltennis_haswell -ltennis_sandy_bridge -ltennis_pentium -lSeetaAuthorize
 // #include <stdlib.h>
 // #include "CStruct.h"
 // #include "FaceTracker_warp.h"

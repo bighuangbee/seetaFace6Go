@@ -2,7 +2,7 @@ src_dir=$(shell pwd)
 seetaface_dir=$(src_dir)/../SeetaFace6Open
 
 SeetaFace6Warp=SeetaFace6Warp
-out_path=../lib
+out_path=../SeetaFace6Warp/bin
 
 .PHONY:lib
 
@@ -26,18 +26,17 @@ bin:
 #========== MSVC ==========
 seetaface_dir_win=$(sehll cd)
 seetaface6_lib_path=D:\code\seetaface6-master\seetaface6-master\build-2\lib\x64
-seetaface6_inc_path=$(seetaface_dir_win)\seetaFace6Warp
+seetaface6_inc_path=$(seetaface_dir_win)
 
 dll:
-	echo $(seetaface_dir_win)
-	cd seetaFace6Warp && cl /EHsc /LD *.cpp /I$(seetaface6_inc_path) /link /LIBPATH:$(seetaface6_lib_path) \
-	SeetaFaceTracking600.lib SeetaFaceLandmarker600.lib SeetaFaceDetector600.lib SeetaFaceRecognizer610.lib \
-	/out:$(out_path)/$(SeetaFace6Warp).dll /implib:$(out_path)/$(SeetaFace6Warp).lib
-
+	cd seetaFace6Warp && cl /EHsc /LD *.cpp /I".\seeta" /Fo$(out_path)\ /link /LIBPATH:".\seeta\lib\x64" \
+	SeetaAgePredictor600.lib SeetaEyeStateDetector200.lib SeetaFaceAntiSpoofingX600.lib SeetaFaceDetector600.lib SeetaFaceLandmarker600.lib SeetaFaceRecognizer610.lib \
+	SeetaFaceTracking600.lib SeetaGenderPredictor600.lib SeetaMaskDetector200.lib SeetaPoseEstimation600.lib SeetaQualityAssessor300.lib \
+	/implib:$(out_path)/SeetaFace6Warp.lib /out:$(out_path)/SeetaFace6Warp.dll
 
 
 run:
-	cd test && go build -o ../lib/test.exe . && ..\lib\test.exe -path1 duo6.jpeg -path2 duo5.jpeg
+	cd seetaFace6Warp\bin && go build -o main.exe ..\..\test\main.go && main.exe ..\..\test\duo6.jpeg
 
 #查看dll导出的函数
 echo_export:

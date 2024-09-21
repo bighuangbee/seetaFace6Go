@@ -6,8 +6,6 @@ import (
 	"unsafe"
 )
 
-// #cgo CFLAGS: -I./seetaFace6Warp
-// #cgo LDFLAGS: -L./lib -lFaceTracker_warp -LD:/code/seetaface6-master/seetaface6-master/build-2/bin/x64 -ltennis
 // #include <stdlib.h>
 // #include "FaceTracker_warp.h"
 import "C"
@@ -16,10 +14,6 @@ import "C"
 type FaceTracker struct {
 	ptr *C.struct_facetracker
 }
-
-const (
-	_FaceDetector_model = "face_detector.csta"
-)
 
 // NewFaceTracker 创建一个人脸追踪器
 func NewFaceTracker(width, height int) *FaceTracker {

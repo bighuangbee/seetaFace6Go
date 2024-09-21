@@ -1,7 +1,5 @@
-package sf6go
+package seetaFace6go
 
-// #cgo CXXFLAGS: -std=c++11 -Wall -O3 -DNDEBUG -march=native
-// #cgo LDFLAGS: -lSeetaFaceRecognizer610
 // #include <stdlib.h>
 // #include "FaceRecognizer_warp.h"
 import "C"
@@ -44,7 +42,8 @@ func NewFaceRecognizer(modelType ModelType) *FaceRecognizer {
 		ptr:      C.facerecognizer_new(cs),
 		FaceType: modelType,
 	}
-	fr.SetProperty(FaceRecognizer_PROPERTY_NUMBER_THREADS, 1)
+	fr.SetProperty(FaceRecognizer_PROPERTY_NUMBER_THREADS, 8)
+
 	fr.FeatureSize = fr.getExtractFeatureSize()
 	return fr
 }

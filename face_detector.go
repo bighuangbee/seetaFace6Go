@@ -1,7 +1,5 @@
-package sf6go
+package seetaFace6go
 
-// #cgo CXXFLAGS: -std=c++11 -Wall -O3 -DNDEBUG -march=native
-// #cgo LDFLAGS: -lSeetaFaceDetector600
 // #include <stdlib.h>
 // #include "FaceDetector_warp.h"
 import "C"
@@ -39,7 +37,7 @@ func NewFaceDetector() *FaceDetector {
 	fd := &FaceDetector{
 		ptr: C.faceDetector_new(cs),
 	}
-	fd.SetProperty(FaceDetector_PROPERTY_NUMBER_THREADS, 1)
+	fd.SetProperty(FaceDetector_PROPERTY_NUMBER_THREADS, 4)
 	return fd
 }
 

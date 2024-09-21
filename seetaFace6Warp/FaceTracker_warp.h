@@ -1,44 +1,23 @@
 #pragma once
 
 #include "CStruct.h"
+#include "CTrackingFaceInfo.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-    typedef struct SeetaFaceInfo
-    {
-        SeetaRect pos;
-        float score;
-    } SeetaFaceInfo;
-
-    typedef struct SeetaTrackingFaceInfo
-    {
-        SeetaRect pos;
-        float score;
-        int frame_no;
-        int PID;
-        int step;
-    } SeetaTrackingFaceInfo;
-
-    typedef struct SeetaTrackingFaceInfoArray
-    {
-        struct SeetaTrackingFaceInfo *data;
-        int size;
-    } SeetaTrackingFaceInfoArray;
-
-    typedef struct facetracker
-    {
-        void *cls;
-    } facetracker;
-
-    // Conditionally define dllexport for Windows
     #ifdef _WIN32
         #define DLLEXPORT __declspec(dllexport)
     #else
         #define DLLEXPORT
     #endif
+
+    typedef struct facetracker
+    {
+        void *cls;
+    } facetracker;
 
     DLLEXPORT facetracker *facetracker_new(char *model, int video_width, int video_height);
     DLLEXPORT void facetracker_free(facetracker *ft);
@@ -60,7 +39,6 @@ extern "C"
 
     DLLEXPORT void facetracker_SetInterval(facetracker *ft, int interval);
     DLLEXPORT void facetracker_Reset(facetracker *ft);
-
 #ifdef __cplusplus
 }
 #endif

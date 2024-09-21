@@ -1,7 +1,5 @@
-package sf6go
+package seetaFace6go
 
-// #cgo CXXFLAGS: -std=c++11 -Wall -O3 -DNDEBUG -march=native
-// #cgo LDFLAGS: -lSeetaFaceLandmarker600
 // #include <stdlib.h>
 // #include "FaceLandmarker_warp.h"
 import "C"
