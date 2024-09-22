@@ -7,8 +7,16 @@ import (
 	"time"
 )
 
+var (
+	modelPath string
+	imageName string
+)
+
 func main() {
-	seetaFace6go.InitModelPath("D:/code/seeta-face6-cgo-main/seeta-face6-cgo-main/demo/models")
+	modelPath = os.Args[1]
+	imageName = os.Args[2]
+
+	seetaFace6go.InitModelPath(modelPath)
 	standard_Test()
 
 }
@@ -34,12 +42,12 @@ func standard_Test() {
 	//// 质量评估器
 	qr := seetaFace6go.NewQualityCheck()
 	defer qr.Close()
-	//// 如果使用默认值，一下参数可以不设置
+	// 如果使用默认值，一下参数可以不设置
 	qr.SetBrightnessValues(70, 100, 210, 230)
 	qr.SetClarityValues(0.1, 0.2)
 	qr.SetIntegrityValues(10, 1.5)
 
-	imageData, err := seetaFace6go.NewSeetaImageDataFromFile(os.Args[1])
+	imageData, err := seetaFace6go.NewSeetaImageDataFromFile(imageName)
 	if err != nil {
 		log.Panic(err)
 	}

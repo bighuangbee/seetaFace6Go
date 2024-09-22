@@ -2,6 +2,7 @@ package seetaFace6go
 
 // #cgo CXXFLAGS: -std=c++11 -Wall -O3 -DNDEBUG -march=native
 // #cgo LDFLAGS: -ltennis -lSeetaAuthorize -lSeetaQualityAssessor300 -lSeetaPoseEstimation600
+
 // #include <stdlib.h>
 // #include "CStruct.h"
 // #include "QualityCheck_warp.h"
