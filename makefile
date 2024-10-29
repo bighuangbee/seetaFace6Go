@@ -2,6 +2,7 @@ cgoWarpName=SeetaFace6Warp
 
 src_mac=$(shell pwd)/$(cgoWarpName)
 out_mac=$(src_mac)/seeta/lib/dylib64
+out_linux=$(src_mac)/seeta/lib/linux_x64
 
 .PHONY:mac_warp
 
@@ -10,6 +11,13 @@ mac_warp:
 	-I$(src_mac) -I$(src_mac)/seeta \
 	-L$(out_mac) \
 	-lSeetaFaceTracking600 -lSeetaFaceDetector600 -lSeetaFaceLandmarker600 -lSeetaFaceRecognizer610 -lSeetaQualityAssessor300
+
+linux_warp:
+	cd $(src_mac) && g++ -std=c++11 *.cpp -fPIC -shared -o $(out_linux)/libSeetaFace6Warp.so \
+	-I$(src_mac) -I$(src_mac)/seeta \
+	-L$(out_linux) \
+	-lSeetaFaceTracking600 -lSeetaFaceDetector600 -lSeetaFaceLandmarker600 -lSeetaFaceRecognizer610 -lSeetaQualityAssessor300
+
 
 #输出后手动执行
 mac_env:

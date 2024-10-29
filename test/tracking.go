@@ -9,15 +9,16 @@ import (
 
 func main() {
 	fmt.Println(123)
-	seetaFace6go.InitModelPath("D:/code/seeta-face6-cgo-main/seeta-face6-cgo-main/demo/models")
+	seetaFace6go.InitModelPath("../seetaFace6Warp/seeta/models/")
 	facetracker_Test()
 
 	// sf6go.NewFacxeTracker(1280, 720)
 }
 
 func facetracker_Test() {
+	t1 := time.Now()
 	log.Println("人脸追踪测试开始:", time.Now())
-	imageData, err := seetaFace6go.NewSeetaImageDataFromFile("duo6.jpeg")
+	imageData, err := seetaFace6go.NewSeetaImageDataFromFile("testData/duo6.jpeg")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -28,7 +29,7 @@ func facetracker_Test() {
 	log.Println("Threshold:", ft.GetThreshold())
 	log.Println("VideoStable:", ft.GetVideoStable())
 	defer ft.Close()
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
 		log.Println("---------------")
 		t := time.Now()
 		faces := ft.Track(imageData)
@@ -41,5 +42,5 @@ func facetracker_Test() {
 		}
 	}
 
-	log.Println("人脸追踪测试结束:", time.Now())
+	log.Println("人脸追踪测试结束:", time.Since(t1).Milliseconds())
 }

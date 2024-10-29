@@ -1,140 +1,109 @@
 package main
 
 import (
+	"fmt"
+	"gocv.io/x/gocv"
+	"image/color"
 	"log"
 	"os"
-	"seetaFace6go"
+	"path/filepath"
+	"strings"
+	"test/seetaFace"
 	"time"
 )
 
-var (
-	modelPath string
-	imageName string
-)
+var faceOutput = "./faceOutput"
 
-func main() {
-	modelPath = os.Args[1]
-	imageName = os.Args[2]
+func init() {
+	os.MkdirAll(faceOutput, 0755)
 
-	seetaFace6go.InitModelPath(modelPath)
-	standard_Test()
-
+	seetaFace.faceIdMap = make(map[int]struct{})
 }
 
-func standard_Test() {
-	log.Println("标准测试开始:", time.Now())
-	// 人脸检测器
-	fd := seetaFace6go.NewFaceDetector()
-	defer fd.Close()
-	// 人脸特征定位器
-	// 使用5点信息模型
-	fl := seetaFace6go.NewFaceLandmarker(seetaFace6go.ModelType_light)
-	defer fl.Close()
-	// 人脸特征提取器
-	fr := seetaFace6go.NewFaceRecognizer(seetaFace6go.ModelType_light)
-	defer fr.Close()
-	// 活体检测器（全局）
-	//fas := seetaFace6go.NewFaceAntiSpoofing_v2()
-	//defer fas.Close()
-	//// 口罩检测器
-	//md := seetaFace6go.NewMaskDetector()
-	//defer md.Close()
-	//// 质量评估器
-	qr := seetaFace6go.NewQualityCheck()
-	defer qr.Close()
-	// 如果使用默认值，一下参数可以不设置
-	qr.SetBrightnessValues(70, 100, 210, 230)
-	qr.SetClarityValues(0.1, 0.2)
-	qr.SetIntegrityValues(10, 1.5)
+func main() {
 
-	imageData, err := seetaFace6go.NewSeetaImageDataFromFile(imageName)
-	if err != nil {
-		log.Panic(err)
+	sface := seetaFace.NewSeetaFace(seetaFace.modelPath)
+
+	inputName := strings.ToLower(os.Args[1])
+
+	var videoCapture *gocv.VideoCapture
+	var err error
+	if strings.HasSuffix(inputName, ".png") || strings.HasSuffix(inputName, ".jpg") {
+		sface.ImageProcess(inputName)
+		return
+	} else if strings.HasSuffix(inputName, ".mp4") {
+		videoCapture, err = gocv.VideoCaptureFile(inputName)
+	} else {
+		videoCapture, err = gocv.VideoCaptureDevice(0)
 	}
 
-	target := []float32{}
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	for i := 0; i < 1; i++ {
+	frame := gocv.NewMat()
+	defer frame.Close()
+
+	// 人脸检测框颜色
+	borderColor := color.RGBA{0, 255, 0, 0}
+
+	// 视频窗口
+	window := gocv.NewWindow("人脸检测")
+	defer window.Close()
+
+	frameCount := 0
+	for {
+		frameCount++
+		if ok := videoCapture.Read(&frame); !ok {
+			fmt.Println("视频结束或无法读取")
+			break
+		}
+		if frame.Empty() {
+			continue
+		}
+
+		log.Println("=====================================")
 
 		start := time.Now()
-		begin := start
+		faces, err := sface.Detect(frame)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("frameCount:", frameCount, "timeSince:", time.Now().Sub(start).Milliseconds())
 
-		postions := fd.Detect(imageData)
-		log.Println("检测人脸", len(postions), "个耗时:", time.Since(start))
-		// 人脸特征定位器
+		if len(faces) > 0 {
+			faceIdExists := false
+			for i, face := range faces {
+				gocv.Rectangle(&frame, face.Rects, borderColor, 2)
+				log.Println("faceInfo", "index:", i+1, "rect:", face.Rects, "pid:", face.PID, "score:", face.Score)
 
-		for i := 0; i < len(postions); i++ {
-			log.Println("---------------------------------------")
-			postion := postions[i].Postion
-			log.Printf("识别人脸%v,x:%v,y:%v,width:%v,height:%v", i,
-				postion.GetX(), postion.GetY(), postion.GetWidth(), postion.GetHeight(),
-			)
-
-			start = time.Now()
-			//isMask := md.Detect(imageData, postion)
-			//log.Println("口罩检测:", isMask, "耗时:", time.Since(start))
-			start = time.Now()
-			pointInfo := fl.Mark(imageData, postion)
-			log.Println("特征定位耗时:", time.Since(start))
-			start = time.Now()
-			brightness := qr.CheckBrightness(imageData, postion, pointInfo)
-			log.Printf("亮度:%v,检测耗时:%v", brightness.Level, time.Since(start))
-			start = time.Now()
-			clarity := qr.CheckClarity(imageData, postion, pointInfo)
-			log.Printf("清晰度:%v,检测耗时:%v", clarity.Level, time.Since(start))
-			start = time.Now()
-			integrity := qr.CheckIntegrity(imageData, postion, pointInfo)
-			log.Printf("完整度:%v,检测耗时:%v", integrity.Level, time.Since(start))
-			start = time.Now()
-			pose := qr.CheckPose(imageData, postion, pointInfo)
-			log.Printf("姿态:%v,可信度:%v,检测耗时:%v", pose.Level, pose.Score, time.Since(start))
-			start = time.Now()
-			// 组合方法特征提取
-			// success, features := fr.Extract(imageData, pointInfo)
-
-			// 单独人脸裁剪
-			face := fr.CropFaceV2(imageData, pointInfo)
-			// 通过裁剪的人脸获取特征
-			success, features := fr.ExtractCroppedFace(face)
-
-			// ok := true
-			// // 两种方法获取特征一致性验证
-			// for i := 0; i < len(features_crop); i++ {
-			// 	if features[i] != features_crop[i] {
-			// 		ok = false
-			// 	}
-			// }
-			log.Println("特征提取", success, len(features), "特征提起方法一致性测试:", "耗时:", time.Since(start))
-
-			if i == 0 {
-				target = features
+				if !faceIdExists {
+					_, faceIdExists = seetaFace.faceIdMap[face.PID]
+					seetaFace.faceIdMap[face.PID] = struct{}{}
+				}
 			}
 
-			score := fr.CalculateSimilarity(target, features)
-			log.Println("score", score)
+			if !faceIdExists {
+				saveImage(frame, frameCount, faces)
+			}
 
-			start = time.Now()
-			//status := fas.Predict(imageData, postion, pointInfo)
-			//log.Println("活体检测", status, "耗时:", time.Since(start))
-
-			//从原始图像中裁剪出人脸
-			// img := imageData.CutFace(postion) //face.GetImage()
-			// outFile, err := os.Create("temp/" + strconv.Itoa(i) + ".jpeg")
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// b := bufio.NewWriter(outFile)
-			// err = jpeg.Encode(b, img, &jpeg.Options{Quality: 95})
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// err = b.Flush()
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// outFile.Close()
 		}
-		log.Println("单帧总耗时:", time.Since(begin))
+
+		window.IMShow(frame)
+
+		if window.WaitKey(1) >= 0 {
+			break
+		}
+		time.Sleep(66 * time.Millisecond)
 	}
-	log.Println("标准测试结束:", time.Now())
+}
+
+func saveImage(frame gocv.Mat, frameCount int, faceInfos []faceInfo) {
+	gocv.IMWrite(filepath.Join(faceOutput, fmt.Sprintf("%d_src.jpg", frameCount)), frame)
+
+	for i, info := range faceInfos {
+		faceRegion := frame.Region(info.Rects)
+		gocv.IMWrite(filepath.Join(faceOutput, fmt.Sprintf("frame_%d_pid_%d.jpg", frameCount, i)), faceRegion)
+		faceRegion.Close()
+	}
 }
