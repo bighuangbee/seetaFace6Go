@@ -17,6 +17,7 @@ func standard_Test() {
 	log.Println("标准测试开始:", time.Now())
 	// 人脸检测器
 	fd := seetaFace6go.NewFaceDetector()
+	fd.SetProperty(seetaFace6go.FaceDetector_PROPERTY_MIN_FACE_SIZE, 70)
 	defer fd.Close()
 	// 人脸特征定位器
 	// 使用5点信息模型
@@ -64,7 +65,7 @@ func standard_Test() {
 			)
 
 			start = time.Now()
-			//isMask := md.Detect(imageData, postion)
+			//isMask := md.Process(imageData, postion)
 			//log.Println("口罩检测:", isMask, "耗时:", time.Since(start))
 			start = time.Now()
 			pointInfo := fl.Mark(imageData, postion)

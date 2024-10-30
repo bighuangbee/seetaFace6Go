@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 )
 
 // copyFile 复制文件，如果目标文件已存在则覆盖
-func copyFile(src, dst string) error {
+func CopyFile(src, dst string) error {
 	var srcF io.Reader
 	var err error
 
@@ -66,4 +66,14 @@ func copyFile(src, dst string) error {
 	}
 
 	return nil
+}
+
+func ExtractIP(url string) string {
+	parts := strings.Split(url, "@")
+	if len(parts) > 1 {
+		hostPart := parts[1]
+		ip := strings.Split(hostPart, ":")[0]
+		return ip
+	}
+	return ""
 }

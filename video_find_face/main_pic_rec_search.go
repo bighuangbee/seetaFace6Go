@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"video-find-face/common"
 )
 
 func main() {
@@ -28,9 +29,9 @@ func main() {
 		Min: image.Point{0, 600},
 		Max: image.Point{1600, 2160},
 	}
-	var face = NewFace("../seetaFace6Warp/seeta/models", targetRect)
+	var face = common.NewFace("../seetaFace6Warp/seeta/models", targetRect)
 
-	regFiles, _ := GetFilesName(*regPath)
+	regFiles, _ := common.GetFilesName(*regPath)
 
 	regFilesCount := uint32(0)
 	fs := []*face_rec.FaceEntity{}
@@ -39,7 +40,7 @@ func main() {
 			continue
 		}
 		mat := gocv.IMRead(filepath.Join(*regPath, filename), gocv.IMReadColor)
-		fe, err := face.recognize(mat)
+		fe, err := face.Recognize(mat)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -66,13 +67,13 @@ func main() {
 	fmt.Println("reg SetFeatures, regFilesLen", regFilesCount, "featureLen", len(fs))
 
 	//搜索
-	searchFiles, _ := GetFilesName(*searchPath)
+	searchFiles, _ := common.GetFilesName(*searchPath)
 	for _, filename := range searchFiles {
 		if strings.Contains(filename, "pid") {
 			continue
 		}
 		mat := gocv.IMRead(filepath.Join(*searchPath, filename), gocv.IMReadColor)
-		fe, err := face.recognize(mat)
+		fe, err := face.Recognize(mat)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -80,7 +81,7 @@ func main() {
 
 		dir := filepath.Join(seachResultPath, filename)
 		os.MkdirAll(dir, 0755)
-		err = copyFile(filepath.Join(*searchPath, filename), filepath.Join(dir, "input_"+filename))
+		err = common.CopyFile(filepath.Join(*searchPath, filename), filepath.Join(dir, "input_"+filename))
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -93,7 +94,7 @@ func main() {
 			}
 
 			for i, result := range results {
-				err = copyFile(filepath.Join(*regPath, regInfos[result.Id]), filepath.Join(dir, fmt.Sprintf("%0.3f", result.Match)+regInfos[result.Id]))
+				err = common.CopyFile(filepath.Join(*regPath, regInfos[result.Id]), filepath.Join(dir, fmt.Sprintf("%0.3f", result.Match)+regInfos[result.Id]))
 				if err != nil {
 					fmt.Println("results ", err)
 				}

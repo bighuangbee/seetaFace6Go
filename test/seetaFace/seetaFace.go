@@ -71,7 +71,7 @@ func (face *SeetaFace) ImageProcess(imageName string) {
 	//}
 }
 
-//func (sface *SeetaFace) Detect(frame gocv.Mat) (infos []main.faceInfo, err error) {
+//func (sface *SeetaFace) Process(frame gocv.Mat) (infos []main.faceInfo, err error) {
 //	if sface.Tracker == nil {
 //		sface.Tracker = seetaFace6go.NewFaceTracker(frame.Cols(), frame.Rows())
 //		//sface.Tracker.SetThreads(1)
@@ -80,7 +80,7 @@ func (face *SeetaFace) ImageProcess(imageName string) {
 //	imgImage, _ := frame.ToImage()
 //
 //	seetaImage := seetaFace6go.NewSeetaImageDataFromImage(imgImage)
-//	results := sface.Detector.Detect(seetaImage)
+//	results := sface.Detector.Process(seetaImage)
 //	for _, info := range results {
 //		infos = append(infos, main.faceInfo{
 //			Rects: image.Rect(info.Postion.GetX(), info.Postion.GetY(), info.Postion.GetX()+info.Postion.GetWidth(), info.Postion.GetY()+info.Postion.GetHeight()),
@@ -143,7 +143,7 @@ func (face *SeetaFace) Run(imageData *seetaFace6go.SeetaImageData) {
 		)
 
 		start = time.Now()
-		//isMask := md.Detect(imageData, postion)
+		//isMask := md.Process(imageData, postion)
 		//log.Println("口罩检测:", isMask, "耗时:", time.Since(start))
 		start = time.Now()
 		pointInfo := face.Landmarker.Mark(imageData, postion)

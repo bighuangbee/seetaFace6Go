@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"errors"
@@ -64,7 +64,7 @@ func parseVideoTime(videoTime string) (time.Time, error) {
 }
 
 // 查找匹配的文件
-func findMatchingVideo(imageName string, videoDir string) (string, error) {
+func FindMatchingVideo(imageName string, videoDir string) (string, error) {
 	imageTime, err := getImageTimestamp(imageName)
 	if err != nil {
 		return "", err
