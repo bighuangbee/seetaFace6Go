@@ -142,7 +142,7 @@ func readVideoAndRecognize(targetFeatures [][]float32, videoFilename string) err
 			//faceIdExists := false
 			for i, face := range faces {
 				gocv.Rectangle(&frame, face.Rects, borderColor, 2)
-				log.Println("Process faceInfo", "index:", i+1, "rect:", face.Rects, "pid:", face.PID, "score:", face.Score)
+				log.Println("ProcessSaveBestImage faceInfo", "index:", i+1, "rect:", face.Rects, "pid:", face.PID, "score:", face.Score)
 
 				//if !faceIdExists {
 				//	_, faceIdExists = faceIdMap[face.PID]

@@ -65,7 +65,7 @@ func standard_Test() {
 			)
 
 			start = time.Now()
-			//isMask := md.Process(imageData, postion)
+			//isMask := md.ProcessSaveBestImage(imageData, postion)
 			//log.Println("口罩检测:", isMask, "耗时:", time.Since(start))
 			start = time.Now()
 			pointInfo := fl.Mark(imageData, postion)

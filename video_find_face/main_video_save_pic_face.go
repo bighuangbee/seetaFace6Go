@@ -26,8 +26,6 @@ export CGO_CXXFLAGS="-I/usr/local/include/opencv4"
 export CGO_CFLAGS="-I/usr/local/include/opencv4"
 export CGO_LDFLAGS="-L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_objdetect -lopencv_features2d -lopencv_video -lopencv_dnn -lopencv_calib3d"
 
-
-
 */
 
 //go run . "rtsp://admin:Ab123456.@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0"
@@ -121,7 +119,7 @@ func main() {
 	os.MkdirAll(common.Output, 0755)
 
 	for _, v := range videoList {
-		common.VideoName = v
+		face.VideoName = v
 		err := videoRecognize(v)
 		if err != nil {
 			log.Println("videoRecognize", err)
@@ -170,7 +168,7 @@ func videoRecognize(videoPath string) error {
 		//	continue
 		//}
 
-		face.Process(&common.Frame{
+		face.ProcessSaveBestImage(&common.Frame{
 			Mat:   &frame,
 			Count: frameCount,
 		})

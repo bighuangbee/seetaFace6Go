@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gocv.io/x/gocv"
 	"image"
-	"image/color"
 	"log"
 	"path/filepath"
 	"seetaFace6go"
@@ -18,32 +17,38 @@ type Face struct {
 	FaceFeature face_rec.IFaceFeature
 	TargetRect  image.Rectangle
 
+	VideoName string
+
 	frames chan *Frame
+
+	EmptyCount int
+	Tracking   bool
+
+	bestImage *Frame
 }
 
 type Frame struct {
 	Mat   *gocv.Mat
 	Count int
+	Score float32
 }
 
-func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (img *seetaFace6go.SeetaImageData) {
-	frameRegion := frame.Mat
+func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFace6go.SeetaImageData) {
+	var frameRegion = *frame.Mat
 	if !targetRect.Empty() {
-		img := frame.Mat.Region(targetRect)
-		frameRegion = &img
-		defer img.Close()
+		frameRegion = frame.Mat.Region(targetRect)
+		defer frameRegion.Close()
 	}
 
+	img, _ := frameRegion.ToImage()
+	return seetaFace6go.NewSeetaImageDataFromImage(img)
+
+	fmt.Println(frameRegion.Cols(), frameRegion.Rows(), frameRegion.Channels())
 	imageData := seetaFace6go.NewSeetaImageData(frameRegion.Cols(), frameRegion.Rows(), frameRegion.Channels())
-	imageData.SetUint8(frame.Mat.ToBytes())
+	imageData.SetUint8(frameRegion.ToBytes())
 	return imageData
 }
 
-func (frame *Frame) Close() {
-	frame.Mat.Close()
-}
-
-var VideoName string
 var Output = "./output"
 
 func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
@@ -63,11 +68,9 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 		Seeta:       sFace,
 		TargetRect:  targetRect,
 		frames:      make(chan *Frame),
+		//bestImages:  make(map[int]ImageScore),
 	}
 }
-
-var frameEmptyCount int
-var frameFaces []gocv.Mat
 
 func (face *Face) SetFrame(frame *Frame) {
 	mat := gocv.NewMat()
@@ -123,7 +126,7 @@ func (face *Face) RecognizeFrame(frame *gocv.Mat, frameCount int, pids []int) {
 	}
 
 	if needSave {
-		picBaseName := filepath.Base(VideoName)
+		picBaseName := filepath.Base(filepath.Base(face.VideoName))
 		ok := gocv.IMWrite(filepath.Join(Output, fmt.Sprintf("%s_frame_%d.jpg", picBaseName, frameCount)), mat)
 		if !ok {
 			log.Println("Write image error")
@@ -136,44 +139,6 @@ func (face *Face) RecognizeFrame(frame *gocv.Mat, frameCount int, pids []int) {
 		}
 	}
 
-}
-
-var borderColor = color.RGBA{0, 255, 0, 0}
-
-func (face *Face) Process(frame *Frame) {
-	t := time.Now()
-
-	face.NewTracker(frame.Mat.Cols(), frame.Mat.Rows())
-
-	img := frame.ToSeetaImage(face.TargetRect)
-
-	faces := face.Seeta.Tracker.Track(img)
-
-	log.Printf("faceTrack, count: %d, faceLen: %d, time: %d \n", frame.Count, len(faces), time.Since(t).Milliseconds())
-
-	if len(faces) > 0 {
-		//	face.SetFrame(&f)
-
-		for _, info := range faces {
-			// 将人脸框的坐标转换到原图
-			originalX := info.Postion.GetX() + face.TargetRect.Min.X
-			originalY := info.Postion.GetY() + face.TargetRect.Min.Y
-
-			// 绘制人脸框
-			gocv.Rectangle(frame.Mat, image.Rectangle{
-				Min: image.Point{originalX, originalY},
-				Max: image.Point{originalX + info.Postion.GetWidth(), originalY + info.Postion.GetHeight()},
-			}, borderColor, 2)
-
-			//fmt.Println(fmt.Sprintf("%d_%0.2f_%0.2f_%0.2f.jpg", frameCount, info.FaceInfo.Score, brightness.Score, clarity.Score))
-			//ok := gocv.IMWrite(filepath.Join("output", fmt.Sprintf("%d_%0.2f_%0.2f_%0.2f.jpg", frame.Count, info.Score, brightness.Score, clarity.Score)), frame.Mat)
-			//if !ok {
-			//	log.Println("Write image error")
-			//}
-		}
-
-		//face.Detect(frame)
-	}
 }
 
 func (face *Face) Detect(frame *Frame) (infos []*seetaFace.DetectInfo) {
@@ -193,9 +158,10 @@ func (face *Face) Detect(frame *Frame) (infos []*seetaFace.DetectInfo) {
 			clarity := face.Seeta.QualityCheck.CheckClarity(img, info.Postion, pointInfo)
 
 			infos = append(infos, &seetaFace.DetectInfo{
-				Quality:  brightness,
-				Clarity:  clarity,
-				FaceInfo: info,
+				Confidence: info.Score,
+				Clarity:    clarity.Score,
+				Brightness: brightness.Score,
+				FaceInfo:   info,
 			})
 		}
 

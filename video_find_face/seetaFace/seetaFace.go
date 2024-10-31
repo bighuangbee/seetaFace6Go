@@ -16,9 +16,10 @@ type SeetaFace struct {
 }
 
 type DetectInfo struct {
-	Quality  *seetaFace6go.QualityResult
-	Clarity  *seetaFace6go.QualityResult
-	FaceInfo *seetaFace6go.SeetaFaceInfo
+	Confidence float32
+	Clarity    float32
+	Brightness float32
+	FaceInfo   *seetaFace6go.SeetaFaceInfo
 }
 
 func NewSeetaFace(modelPath string) *SeetaFace {
