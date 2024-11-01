@@ -1,4 +1,4 @@
-package common
+package video_find_face
 
 import (
 	"face_recognize/recognize/face_rec"
@@ -37,13 +37,12 @@ func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFac
 	var frameRegion = *frame.Mat
 	if !targetRect.Empty() {
 		frameRegion = frame.Mat.Region(targetRect)
-		defer frameRegion.Close()
+		//defer frameRegion.Close()
 	}
 
-	img, _ := frameRegion.ToImage()
-	return seetaFace6go.NewSeetaImageDataFromImage(img)
+	//img, _ := frameRegion.ToImage()
+	//return seetaFace6go.NewSeetaImageDataFromImage(img)
 
-	fmt.Println(frameRegion.Cols(), frameRegion.Rows(), frameRegion.Channels())
 	imageData := seetaFace6go.NewSeetaImageData(frameRegion.Cols(), frameRegion.Rows(), frameRegion.Channels())
 	imageData.SetUint8(frameRegion.ToBytes())
 	return imageData
@@ -61,31 +60,18 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 
 	sFace := seetaFace.NewSeetaFace(sFaceModel)
 	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_MIN_FACE_SIZE, 60)
-	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_NUMBER_THREADS, 1)
+	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_NUMBER_THREADS, 4)
 
-	return &Face{
+	face := &Face{
 		FaceFeature: FaceFeature,
 		Seeta:       sFace,
 		TargetRect:  targetRect,
-		frames:      make(chan *Frame),
-		//bestImages:  make(map[int]ImageScore),
+		frames:      make(chan *Frame, 10),
 	}
-}
 
-func (face *Face) SetFrame(frame *Frame) {
-	mat := gocv.NewMat()
-	frame.Mat.CopyTo(&mat)
-	face.frames <- &Frame{
-		Mat:   &mat,
-		Count: frame.Count,
-	}
-}
+	go face.DetectFrame()
 
-func (face *Face) ProcessFrame() {
-	for frame := range face.frames {
-		face.Detect(frame)
-		frame.Mat.Close()
-	}
+	return face
 }
 
 func (face *Face) NewTracker(width, height int) {
@@ -97,7 +83,7 @@ func (face *Face) NewTracker(width, height int) {
 		face.Seeta.Tracker = seetaFace6go.NewFaceTracker(width, height)
 		face.Seeta.Tracker.SetVideoStable(true)
 		face.Seeta.Tracker.SetInterval(1)
-		//sFace.Tracker.SetThreads(4)
+		face.Seeta.Tracker.SetThreads(1) //mac: 4
 		face.Seeta.Tracker.SetMinFaceSize(60)
 	}
 }
@@ -142,13 +128,8 @@ func (face *Face) RecognizeFrame(frame *gocv.Mat, frameCount int, pids []int) {
 }
 
 func (face *Face) Detect(frame *Frame) (infos []*seetaFace.DetectInfo) {
-	start := time.Now()
 	img := frame.ToSeetaImage(face.TargetRect)
 	faces := face.Seeta.Detector.Detect(img)
-
-	//if frameCount%15 == 0 {
-	log.Println("faceTrack, frame:", frame.Count, "time:", time.Now().Sub(start).Milliseconds())
-	//}
 
 	if len(faces) > 0 {
 		pids := []int{}

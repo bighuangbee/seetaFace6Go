@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"video-find-face/common"
+	"video-find-face"
 )
 
 func main() {
@@ -29,9 +29,9 @@ func main() {
 		Min: image.Point{0, 600},
 		Max: image.Point{1600, 2160},
 	}
-	var face = common.NewFace("../seetaFace6Warp/seeta/models", targetRect)
+	var face = video_find_face.NewFace("../seetaFace6Warp/seeta/models", targetRect)
 
-	regFiles, _ := common.GetFilesName(*regPath)
+	regFiles, _ := video_find_face.GetFilesName(*regPath)
 
 	regFilesCount := uint32(0)
 	fs := []*face_rec.FaceEntity{}
@@ -67,7 +67,7 @@ func main() {
 	fmt.Println("reg SetFeatures, regFilesLen", regFilesCount, "featureLen", len(fs))
 
 	//搜索
-	searchFiles, _ := common.GetFilesName(*searchPath)
+	searchFiles, _ := video_find_face.GetFilesName(*searchPath)
 	for _, filename := range searchFiles {
 		if strings.Contains(filename, "pid") {
 			continue
@@ -81,7 +81,7 @@ func main() {
 
 		dir := filepath.Join(seachResultPath, filename)
 		os.MkdirAll(dir, 0755)
-		err = common.CopyFile(filepath.Join(*searchPath, filename), filepath.Join(dir, "input_"+filename))
+		err = video_find_face.CopyFile(filepath.Join(*searchPath, filename), filepath.Join(dir, "input_"+filename))
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -94,7 +94,7 @@ func main() {
 			}
 
 			for i, result := range results {
-				err = common.CopyFile(filepath.Join(*regPath, regInfos[result.Id]), filepath.Join(dir, fmt.Sprintf("%0.3f", result.Match)+regInfos[result.Id]))
+				err = video_find_face.CopyFile(filepath.Join(*regPath, regInfos[result.Id]), filepath.Join(dir, fmt.Sprintf("%0.3f", result.Match)+regInfos[result.Id]))
 				if err != nil {
 					fmt.Println("results ", err)
 				}

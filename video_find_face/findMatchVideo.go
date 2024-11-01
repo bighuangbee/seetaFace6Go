@@ -1,4 +1,4 @@
-package common
+package video_find_face
 
 import (
 	"errors"
@@ -107,4 +107,17 @@ func GetFilesName(dir string) (files []string, err error) {
 		}
 	}
 	return files, nil
+}
+
+func GetPathName(dir string) string {
+	parts := strings.Split(dir, string(os.PathSeparator))
+
+	// 检查是否包含日期格式
+	datePattern := regexp.MustCompile(`\d{4}-\d{2}-\d{2}`)
+	for _, part := range parts {
+		if datePattern.MatchString(part) {
+			return part
+		}
+	}
+	return ""
 }

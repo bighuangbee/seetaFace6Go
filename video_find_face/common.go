@@ -1,4 +1,4 @@
-package common
+package video_find_face
 
 import (
 	"fmt"
