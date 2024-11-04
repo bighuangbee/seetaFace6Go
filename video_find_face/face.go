@@ -2,13 +2,9 @@ package video_find_face
 
 import (
 	"face_recognize/recognize/face_rec"
-	"fmt"
 	"gocv.io/x/gocv"
 	"image"
-	"log"
-	"path/filepath"
 	"seetaFace6go"
-	"time"
 	"video-find-face/seetaFace"
 )
 
@@ -18,6 +14,7 @@ type Face struct {
 	TargetRect  image.Rectangle
 
 	VideoName string
+	VideoFPS  float64
 
 	frames chan *Frame
 
@@ -28,9 +25,10 @@ type Face struct {
 }
 
 type Frame struct {
-	Mat   *gocv.Mat
-	Count int
-	Score float32
+	Mat        *gocv.Mat
+	Count      int //帧计数
+	CountStart int
+	Score      float32
 }
 
 func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFace6go.SeetaImageData) {
@@ -69,62 +67,9 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 		frames:      make(chan *Frame, 10),
 	}
 
-	go face.DetectFrame()
+	go face.FrameProcess()
 
 	return face
-}
-
-func (face *Face) NewTracker(width, height int) {
-	if face.Seeta.Tracker == nil {
-		if !face.TargetRect.Empty() {
-			width = face.TargetRect.Size().X
-			height = face.TargetRect.Size().Y
-		}
-		face.Seeta.Tracker = seetaFace6go.NewFaceTracker(width, height)
-		face.Seeta.Tracker.SetVideoStable(true)
-		face.Seeta.Tracker.SetInterval(1)
-		face.Seeta.Tracker.SetThreads(1) //mac: 4
-		face.Seeta.Tracker.SetMinFaceSize(60)
-	}
-}
-
-func (face *Face) RecognizeFrame(frame *gocv.Mat, frameCount int, pids []int) {
-	t := time.Now()
-	mat := gocv.NewMat()
-	frame.CopyTo(&mat)
-	fe, err := face.Recognize(mat)
-	if err != nil {
-		log.Println("Recognize error", err)
-	}
-	defer mat.Close()
-
-	log.Println("Recognize faceLen:", len(fe), "time.Sinde:", time.Since(t).Milliseconds(), "pids", pids)
-
-	needSave := false
-	rects := []image.Rectangle{}
-	for _, entity := range fe {
-		log.Println("Recognize entity", entity.Quality, entity.Rect)
-		rects = append(rects, entity.Rect)
-
-		if entity.Quality > 0.6 && !needSave {
-			needSave = true
-		}
-	}
-
-	if needSave {
-		picBaseName := filepath.Base(filepath.Base(face.VideoName))
-		ok := gocv.IMWrite(filepath.Join(Output, fmt.Sprintf("%s_frame_%d.jpg", picBaseName, frameCount)), mat)
-		if !ok {
-			log.Println("Write image error")
-		}
-
-		for i, face := range fe {
-			faceRegion := mat.Region(face.Rect)
-			gocv.IMWrite(filepath.Join(Output, fmt.Sprintf("%s_frame_%d_pid_%d_q_%0.2f.jpg", picBaseName, frameCount, i, face.Quality)), faceRegion)
-			faceRegion.Close()
-		}
-	}
-
 }
 
 func (face *Face) Detect(frame *Frame) (infos []*seetaFace.DetectInfo) {
@@ -132,40 +77,27 @@ func (face *Face) Detect(frame *Frame) (infos []*seetaFace.DetectInfo) {
 	faces := face.Seeta.Detector.Detect(img)
 
 	if len(faces) > 0 {
-		pids := []int{}
 		for _, info := range faces {
 			pointInfo := face.Seeta.Landmarker.Mark(img, info.Postion)
 			brightness := face.Seeta.QualityCheck.CheckBrightness(img, info.Postion, pointInfo)
 			clarity := face.Seeta.QualityCheck.CheckClarity(img, info.Postion, pointInfo)
+			integrity := face.Seeta.QualityCheck.CheckIntegrity(img, info.Postion, pointInfo)
+
+			//ok, _ := face.Seeta.Recognizer.Extract(img, pointInfo)
 
 			infos = append(infos, &seetaFace.DetectInfo{
 				Confidence: info.Score,
 				Clarity:    clarity.Score,
 				Brightness: brightness.Score,
+				Integrity:  integrity.Score,
 				FaceInfo:   info,
 			})
 		}
 
-		if face.FaceFeature != nil {
-			go face.RecognizeFrame(frame.Mat, frame.Count, pids)
-		}
+		//if face.FaceFeature != nil {
+		//	go face.RecognizeFrame(frame.Mat, frame.Count, pids)
+		//}
 	}
 
 	return infos
-}
-
-func (face *Face) Recognize(frame gocv.Mat) ([]*face_rec.FaceEntity, error) {
-	buf, err := gocv.IMEncode(".jpg", frame)
-	if err != nil {
-		return nil, err
-	}
-
-	image, _ := face_rec.ReadImageByFormByte(buf.GetBytes(), "1.jpg")
-	faces, err := face.FaceFeature.ExtractFeature(image, face_rec.ExtractAll)
-	if err != nil {
-		return nil, err
-	}
-	buf.Close()
-
-	return faces, nil
 }

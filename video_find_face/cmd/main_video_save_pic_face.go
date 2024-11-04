@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 	"video-find-face"
 )
@@ -135,8 +136,10 @@ func videoRecognize(videoPath string) error {
 
 	defer videoCapture.Close()
 
+	totalFrames := int(videoCapture.Get(gocv.VideoCaptureFrameCount))
 	fps := videoCapture.Get(gocv.VideoCaptureFPS)
-	fmt.Printf("视频文件: %s, 帧率: %.2f fps\n", videoPath, fps)
+	face.VideoFPS = fps
+	fmt.Printf("视频文件: %s, 帧率: %.2f fps, 帧数: %d\n", videoPath, fps, totalFrames)
 
 	frame := gocv.NewMat()
 	defer frame.Close()
@@ -144,31 +147,35 @@ func videoRecognize(videoPath string) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	frameCount := 0
+	frameCount := int32(0)
 	processingCount := 0
 
 	go func() {
+		timeCount := 0
 		for range ticker.C {
-			fmt.Printf("一秒内处理了 %d 帧\n", processingCount)
+			timeCount++
+			log.Printf("处理效率, 第%d秒, FPS:%d\n", timeCount, processingCount)
 			processingCount = 0
 		}
 	}()
 
 	for {
+		atomic.AddInt32(&frameCount, 1)
+		processingCount++
+
 		if ok := videoCapture.Read(&frame); !ok {
-			fmt.Println("视频结束或无法读取")
+			fmt.Println("视频结束或无法读取", frameCount)
+
+			face.Seeta.ResetTracker()
 			break
 		}
 		if frame.Empty() {
 			continue
 		}
 
-		frameCount++
-		processingCount++
-
 		face.Process(&video_find_face.Frame{
 			Mat:   &frame,
-			Count: frameCount,
+			Count: int(atomic.LoadInt32(&frameCount)),
 		})
 
 		gocv.Rectangle(&frame, face.TargetRect, borderColor, 2)

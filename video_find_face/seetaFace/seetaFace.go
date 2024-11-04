@@ -1,6 +1,8 @@
 package seetaFace
 
 import (
+	"image"
+	"log"
 	"seetaFace6go"
 )
 
@@ -19,6 +21,7 @@ type DetectInfo struct {
 	Confidence float32
 	Clarity    float32
 	Brightness float32
+	Integrity  float32
 	FaceInfo   *seetaFace6go.SeetaFaceInfo
 }
 
@@ -44,4 +47,24 @@ func NewSeetaFace(modelPath string) *SeetaFace {
 		Recognizer:   fr,
 		QualityCheck: qr,
 	}
+}
+
+func (face *SeetaFace) NewTracker(width, height int, targetRect image.Rectangle) {
+	if face.Tracker == nil {
+		log.Println("NewTracker", width, height, targetRect)
+
+		if !targetRect.Empty() {
+			width = targetRect.Size().X
+			height = targetRect.Size().Y
+		}
+		face.Tracker = seetaFace6go.NewFaceTracker(width, height)
+		face.Tracker.SetVideoStable(true)
+		face.Tracker.SetInterval(1)
+		face.Tracker.SetThreads(1) //mac: 4
+		face.Tracker.SetMinFaceSize(60)
+	}
+}
+
+func (face *SeetaFace) ResetTracker() {
+	face.Tracker = nil
 }
