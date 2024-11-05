@@ -13,13 +13,11 @@ type Face struct {
 	FaceFeature face_rec.IFaceFeature
 	TargetRect  image.Rectangle
 
-	VideoName string
-	VideoFPS  float64
+	VideoInfo *VideoInfo
+
+	TrackState TrackState
 
 	frames chan *Frame
-
-	EmptyCount int
-	Tracking   bool
 
 	bestImage *Frame
 }
@@ -29,6 +27,12 @@ type Frame struct {
 	Count      int //帧计数
 	CountStart int
 	Score      float32
+}
+
+type TrackState struct {
+	//连续多少帧没检测到人脸
+	EmptyCount int
+	Tracking   bool
 }
 
 func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFace6go.SeetaImageData) {
@@ -66,8 +70,6 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 		TargetRect:  targetRect,
 		frames:      make(chan *Frame, 10),
 	}
-
-	go face.FrameProcess()
 
 	return face
 }

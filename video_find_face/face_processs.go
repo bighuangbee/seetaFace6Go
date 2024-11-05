@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"gocv.io/x/gocv"
 	"log"
-	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -20,9 +20,8 @@ func (face *Face) Process(frame *Frame) {
 	//log.Printf("faceTrack, count: %d, faceLen: %d, time: %d \n", frame.Count, len(faces), time.Since(t).Milliseconds())
 
 	if len(faces) > 0 {
-
-		if !face.Tracking {
-			face.Tracking = true
+		if !face.TrackState.Tracking {
+			face.TrackState.Tracking = true
 			log.Println("人脸跟踪开始")
 		}
 
@@ -50,27 +49,16 @@ func (face *Face) Process(frame *Frame) {
 		//}
 
 		face.SetFrame(frame)
-
-		//savePath := ""
-		//filename := fmt.Sprintf("%d_%0.3f.jpg", frame.Count, frame.Score)
-		//ok := gocv.IMWrite(filepath.Join("", filename), *frame.Mat)
-		//if !ok {
-		//	log.Println("Write image error", filepath.Join(savePath, filename))
-		//} else {
-		//	log.Println("savePath: ", filepath.Join(savePath, filename))
-		//}
-
 	} else {
 		//连续x帧检测不到人脸，认为已经过，重置
-		if face.Tracking {
-			face.EmptyCount++
-			if face.EmptyCount > int(face.VideoFPS) {
-				face.EmptyCount = 0
-				face.Tracking = false
+		if face.TrackState.Tracking {
+			face.TrackState.EmptyCount++
+			if face.TrackState.EmptyCount > int(face.VideoInfo.FPS) {
+				face.TrackState.EmptyCount = 0
+				face.TrackState.Tracking = false
 
 				frame.Mat = nil
 				face.SetFrame(frame)
-
 			}
 		}
 	}
@@ -91,14 +79,19 @@ func (face *Face) SetFrame(frame *Frame) {
 	}
 }
 
-func (face *Face) FrameProcess() {
+func (face *Face) FrameProcess(wg *sync.WaitGroup) {
 	for frame := range face.frames {
-		face.ComputeBestFaces(frame)
+		face.FrameDetectSave(frame)
 	}
+	wg.Done()
+}
+
+func (face *Face) FrameClose() {
+	close(face.frames)
 }
 
 // 计算有多少个/组游客，确定是否漏检
-func (face *Face) ComputeBestFaces(frame *Frame) {
+func (face *Face) FrameDetectSave(frame *Frame) {
 	if frame.Mat != nil {
 		t := time.Now()
 		infos := face.Detect(frame)
@@ -121,31 +114,16 @@ func (face *Face) ComputeBestFaces(frame *Frame) {
 	} else {
 		//跟踪结束信号
 
-		outputStart := face.bestImage.CountStart - (int(face.VideoFPS) * 1)
-		outputEnd := frame.Count + (int(face.VideoFPS) * 1)
-		outputName := fmt.Sprintf("video_output_%d_%d.mp4", outputStart, outputEnd)
+		//output/视频文件名 或 output/录像日期/视频文件名
+		outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, frame.Count)
+		log.Println("视频片段保存, errInfo:", err, "outputName:", outputName)
 
-		err := ExtractVideoSegment(face.VideoName,
-			outputName, outputStart, outputEnd)
-		if err != nil {
-			log.Println("ExtractVideoSegment", err)
-		}
+		picName := filepath.Join(filepath.Dir(outputName),
+			fmt.Sprintf("%d_%d_%0.5f.jpg", face.bestImage.CountStart, face.bestImage.Count, face.bestImage.Score))
+		ok := gocv.IMWrite(picName, *face.bestImage.Mat)
+		log.Println("照片保存, ok:", ok, picName)
 
-		face.bestImage.CountStart = 0
-
-		//结果输出目录，output/视频文件名 或 output/录像日期/视频文件名
-		filename := fmt.Sprintf("%d_%0.5f.jpg", face.bestImage.Count, face.bestImage.Score)
-		savePath := filepath.Join("output", GetPathName(face.VideoName), filepath.Base(face.VideoName))
-		os.MkdirAll(savePath, 0755)
-
-		ok := gocv.IMWrite(filepath.Join(savePath, filename), *face.bestImage.Mat)
-		if !ok {
-			log.Println("Write image error", filepath.Join(savePath, filename))
-		} else {
-			log.Println("savePath: ", filepath.Join(savePath, filename))
-		}
-
-		face.bestImage = nil
+		face.ResetBestFrame()
 	}
 }
 
@@ -165,4 +143,9 @@ func (face *Face) SetBestFrame(f *Frame) {
 			face.bestImage.Score = f.Score
 		}
 	}
+}
+
+func (face *Face) ResetBestFrame() {
+	face.bestImage.CountStart = 0
+	face.bestImage = nil
 }

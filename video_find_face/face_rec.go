@@ -34,7 +34,7 @@ func (face *Face) RecognizeFrame(frame *gocv.Mat, frameCount int, pids []int) {
 	}
 
 	if needSave {
-		picBaseName := filepath.Base(filepath.Base(face.VideoName))
+		picBaseName := filepath.Base(filepath.Base(face.VideoInfo.Name))
 		ok := gocv.IMWrite(filepath.Join(Output, fmt.Sprintf("%s_frame_%d.jpg", picBaseName, frameCount)), mat)
 		if !ok {
 			log.Println("Write image error")

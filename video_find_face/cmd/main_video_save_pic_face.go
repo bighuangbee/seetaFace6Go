@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"gocv.io/x/gocv"
 	"image"
-	"image/color"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"video-find-face"
@@ -116,10 +116,6 @@ func isVideo(videoPath string) bool {
 }
 
 func videoRecognize(videoPath string) error {
-	face.VideoName = videoPath
-
-	// 人脸检测框颜色
-	var borderColor = color.RGBA{0, 255, 0, 0}
 
 	var videoCapture *gocv.VideoCapture
 	var err error
@@ -133,13 +129,15 @@ func videoRecognize(videoPath string) error {
 	if err != nil {
 		return err
 	}
-
 	defer videoCapture.Close()
 
-	totalFrames := int(videoCapture.Get(gocv.VideoCaptureFrameCount))
-	fps := videoCapture.Get(gocv.VideoCaptureFPS)
-	face.VideoFPS = fps
-	fmt.Printf("视频文件: %s, 帧率: %.2f fps, 帧数: %d\n", videoPath, fps, totalFrames)
+	face.VideoInfo = &video_find_face.VideoInfo{
+		Name:       videoPath,
+		FPS:        videoCapture.Get(gocv.VideoCaptureFPS),
+		TotalFrame: videoCapture.Get(gocv.VideoCaptureFrameCount),
+	}
+
+	log.Printf("视频文件: %s, 帧率: %.2f fps, 帧数: %d\n", face.VideoInfo.Name, face.VideoInfo.FPS, face.VideoInfo.TotalFrame)
 
 	frame := gocv.NewMat()
 	defer frame.Close()
@@ -147,30 +145,39 @@ func videoRecognize(videoPath string) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
+	//帧计数器
 	frameCount := int32(0)
-	processingCount := 0
+	//FPS计数器
+	processingCount := int32(0)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go face.FrameProcess(&wg)
 
 	go func() {
 		timeCount := 0
 		for range ticker.C {
 			timeCount++
-			log.Printf("处理效率, 第%d秒, FPS:%d\n", timeCount, processingCount)
-			processingCount = 0
+			log.Printf("处理效率, 第%d秒, FPS:%d, 已处理%d帧\n", timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
+			atomic.StoreInt32(&processingCount, 0)
 		}
 	}()
 
 	for {
 		atomic.AddInt32(&frameCount, 1)
-		processingCount++
+		atomic.AddInt32(&processingCount, 1)
 
 		if ok := videoCapture.Read(&frame); !ok {
-			fmt.Println("视频结束或无法读取", frameCount)
-
-			face.Seeta.ResetTracker()
+			log.Println("视频结束或无法读取", frameCount)
 			break
 		}
 		if frame.Empty() {
 			continue
+		}
+
+		//最后一帧
+		if frameCount == int32(face.VideoInfo.TotalFrame) {
+			break
 		}
 
 		face.Process(&video_find_face.Frame{
@@ -178,14 +185,21 @@ func videoRecognize(videoPath string) error {
 			Count: int(atomic.LoadInt32(&frameCount)),
 		})
 
-		gocv.Rectangle(&frame, face.TargetRect, borderColor, 2)
-
+		//gocv.Rectangle(&frame, face.TargetRect, color.RGBA{0, 255, 0, 0}, 2)
 		//window.IMShow(frame)
 		//if window.WaitKey(33) >= 0 {
 		//	break
 		//}
-
 	}
 
+	face.Seeta.ResetTracker()
+
+	// 视频结束，停止跟踪
+	if face.TrackState.Tracking {
+		face.SetFrame(&video_find_face.Frame{Count: int(face.VideoInfo.TotalFrame)})
+		face.FrameClose()
+	}
+
+	wg.Wait()
 	return nil
 }
