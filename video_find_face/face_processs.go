@@ -12,7 +12,7 @@ import (
 func (face *Face) Process(frame *Frame) {
 	//t := time.Now()
 
-	face.Seeta.NewTracker(frame.Mat.Cols(), frame.Mat.Rows(), face.TargetRect)
+	face.Seeta.NewTracker(frame.Mat.Cols(), frame.Mat.Rows())
 
 	img := frame.ToSeetaImage(face.TargetRect)
 	faces := face.Seeta.Tracker.Track(img)
@@ -83,6 +83,7 @@ func (face *Face) FrameProcess(wg *sync.WaitGroup) {
 	for frame := range face.frames {
 		face.FrameDetectSave(frame)
 	}
+	fmt.Println("=====FrameProcess")
 	wg.Done()
 }
 
@@ -94,7 +95,7 @@ func (face *Face) FrameClose() {
 func (face *Face) FrameDetectSave(frame *Frame) {
 	if frame.Mat != nil {
 		t := time.Now()
-		infos := face.Detect(frame)
+		infos := face.Seeta.Detect(frame.ToSeetaImage(face.TargetRect))
 		if len(infos) > 0 {
 			for _, info := range infos {
 				if frame.Score == 0 {
@@ -115,11 +116,11 @@ func (face *Face) FrameDetectSave(frame *Frame) {
 		//跟踪结束信号
 
 		//output/视频文件名 或 output/录像日期/视频文件名
-		outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, frame.Count)
+		outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, float64(frame.Count))
 		log.Println("视频片段保存, errInfo:", err, "outputName:", outputName)
 
 		picName := filepath.Join(filepath.Dir(outputName),
-			fmt.Sprintf("%d_%d_%0.5f.jpg", face.bestImage.CountStart, face.bestImage.Count, face.bestImage.Score))
+			fmt.Sprintf("%d_%d_%0.5f.jpg", int(face.bestImage.CountStart), int(face.bestImage.Count), face.bestImage.Score))
 		ok := gocv.IMWrite(picName, *face.bestImage.Mat)
 		log.Println("照片保存, ok:", ok, picName)
 
@@ -130,7 +131,7 @@ func (face *Face) FrameDetectSave(frame *Frame) {
 func (face *Face) SetBestFrame(f *Frame) {
 	if face.bestImage == nil {
 		face.bestImage = &Frame{
-			CountStart: f.Count,
+			CountStart: float64(f.Count),
 		}
 	}
 

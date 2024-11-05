@@ -14,17 +14,18 @@ type VideoInfo struct {
 	TotalFrame float64
 }
 
-func (videoInfo *VideoInfo) SaveVideo(startFrame, endFrame int) (string, error) {
-	savePath := filepath.Join("output", GetPathName(videoInfo.Name), filepath.Base(videoInfo.Name))
+func (videoInfo *VideoInfo) SaveVideo(startFrame, endFrame float64) (string, error) {
+	//savePath := filepath.Join("output", GetPathName(videoInfo.Name), filepath.Base(videoInfo.Name))
+	savePath := filepath.Join(filepath.Dir(videoInfo.Name), "output", filepath.Base(videoInfo.Name))
 	if err := os.MkdirAll(savePath, 0755); err != nil {
 		return "", err
 	}
 
-	videoOutputName := filepath.Join(savePath, fmt.Sprintf("%d_%d.mp4", startFrame, endFrame))
-	return videoOutputName, ExtractVideoSegment(videoInfo.Name, videoOutputName, startFrame, endFrame)
+	videoOutputName := filepath.Join(savePath, fmt.Sprintf("%d_%d.mp4", int(startFrame), int(endFrame)))
+	return videoOutputName, ExtractVideoSegment(videoInfo.Name, videoOutputName, startFrame, endFrame, videoInfo.TotalFrame)
 }
 
-func ExtractVideoSegment(videoPath, outputPath string, start, end int) error {
+func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame float64) error {
 	videoCapture, err := gocv.VideoCaptureFile(videoPath)
 	if err != nil {
 		return fmt.Errorf("无法打开视频文件: %v", err)
@@ -32,12 +33,15 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end int) error {
 	defer videoCapture.Close()
 
 	fps := videoCapture.Get(gocv.VideoCaptureFPS)
-	totalFrames := int(videoCapture.Get(gocv.VideoCaptureFrameCount))
+	totalFrames := videoCapture.Get(gocv.VideoCaptureFrameCount)
+	if totalFrames < 0 {
+		totalFrames = totalFrame
+	}
 
-	log.Printf("截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %d, 开始帧: %d, 结束帧: %d\n", filepath.Base(videoPath), fps, totalFrames, start, end)
+	fmt.Println("====ExtractVideoSegment, totalFrames", totalFrames, "start", start, "totalFrames < 0 ", totalFrames < 0)
 
-	start -= int(fps) * 1
-	end += int(fps) * 1
+	start -= fps * 1.5
+	end += fps * 1
 
 	if start >= totalFrames {
 		return fmt.Errorf("开始帧超出范围")
@@ -48,6 +52,8 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end int) error {
 	if end > totalFrames {
 		end = totalFrames
 	}
+
+	log.Printf("截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %0.1f, 结束帧: %0.1f\n", filepath.Base(videoPath), fps, totalFrames, start, end)
 
 	writer, err := gocv.VideoWriterFile(outputPath, "mp4v",
 		fps,

@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,18 +16,17 @@ import (
 	"video-find-face"
 )
 
-var face *video_find_face.Face
+//var face *video_find_face.Face
 
 func init() {
-	os.Mkdir(video_find_face.Output, 0755)
 
 	//min := image.Point{0, 500}
-	var targetRect = image.Rectangle{
-		//Min: min,
-		//Max: image.Point{min.X + 2844, min.Y + 1600},
-	}
-
-	face = video_find_face.NewFace("../../seetaFace6Warp/seeta/models", targetRect)
+	//var targetRect = image.Rectangle{
+	//	//Min: min,
+	//	//Max: image.Point{min.X + 2844, min.Y + 1600},
+	//}
+	//
+	//face = video_find_face.NewFace("../../seetaFace6Warp/seeta/models", targetRect)
 }
 
 //var window *gocv.Window
@@ -45,6 +45,7 @@ func main() {
 	videoList := []string{}
 
 	var videoBasePath string
+	fmt.Println(videoBasePath)
 
 	if isVideo(*videoPath) {
 		if strings.HasPrefix(*videoPath, "rtsp") {
@@ -100,15 +101,35 @@ func main() {
 		}
 	}
 
-	for _, v := range videoList {
+	processConcurrency(videoList)
 
-		fmt.Println(videoBasePath)
+}
 
-		err := videoRecognize(v)
-		if err != nil {
-			log.Println("videoRecognize", err)
-		}
+func processConcurrency(videos []string) {
+	numCPU := runtime.NumCPU()
+	parallelism := numCPU / 4
+
+	var wg sync.WaitGroup
+
+	log.Println("=============并行任务数量:", parallelism)
+
+	sem := make(chan struct{}, parallelism)
+
+	for _, video := range videos {
+		sem <- struct{}{}
+		wg.Add(1)
+
+		go func(videoPath string) {
+			defer func() { <-sem }()
+			if err := videoRecognize(videoPath); err != nil {
+				log.Println("videoRecognize", err, videoPath)
+			}
+			wg.Done()
+		}(video)
 	}
+
+	// 等待所有 goroutine 完成
+	wg.Wait()
 }
 
 func isVideo(videoPath string) bool {
@@ -116,6 +137,8 @@ func isVideo(videoPath string) bool {
 }
 
 func videoRecognize(videoPath string) error {
+
+	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", image.Rectangle{})
 
 	var videoCapture *gocv.VideoCapture
 	var err error
@@ -131,13 +154,17 @@ func videoRecognize(videoPath string) error {
 	}
 	defer videoCapture.Close()
 
+	totalFrame := videoCapture.Get(gocv.VideoCaptureFrameCount)
 	face.VideoInfo = &video_find_face.VideoInfo{
 		Name:       videoPath,
 		FPS:        videoCapture.Get(gocv.VideoCaptureFPS),
-		TotalFrame: videoCapture.Get(gocv.VideoCaptureFrameCount),
+		TotalFrame: totalFrame,
 	}
 
-	log.Printf("视频文件: %s, 帧率: %.2f fps, 帧数: %d\n", face.VideoInfo.Name, face.VideoInfo.FPS, face.VideoInfo.TotalFrame)
+	fmt.Println("--totall", videoCapture.Get(gocv.VideoCaptureFrameCount), videoCapture.Get(gocv.VideoCaptureFrameCount) < 0)
+
+	log.Printf("--------------------------------------------------\n")
+	log.Printf("开始处理视频，文件名: %s, 帧率: %.1f fps, 总帧数: %0.1f\n", face.VideoInfo.Name, face.VideoInfo.FPS, face.VideoInfo.TotalFrame)
 
 	frame := gocv.NewMat()
 	defer frame.Close()
@@ -158,7 +185,7 @@ func videoRecognize(videoPath string) error {
 		timeCount := 0
 		for range ticker.C {
 			timeCount++
-			log.Printf("处理效率, 第%d秒, FPS:%d, 已处理%d帧\n", timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
+			log.Printf("视频:%s,第%d秒,FPS:%d,已处理%d帧\n", filepath.Base(videoPath), timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
 			atomic.StoreInt32(&processingCount, 0)
 		}
 	}()
@@ -167,17 +194,16 @@ func videoRecognize(videoPath string) error {
 		atomic.AddInt32(&frameCount, 1)
 		atomic.AddInt32(&processingCount, 1)
 
+		if totalFrame < 0 {
+			face.VideoInfo.TotalFrame = float64(atomic.LoadInt32(&frameCount))
+		}
+
 		if ok := videoCapture.Read(&frame); !ok {
 			log.Println("视频结束或无法读取", frameCount)
 			break
 		}
 		if frame.Empty() {
 			continue
-		}
-
-		//最后一帧
-		if frameCount == int32(face.VideoInfo.TotalFrame) {
-			break
 		}
 
 		face.Process(&video_find_face.Frame{
@@ -197,9 +223,9 @@ func videoRecognize(videoPath string) error {
 	// 视频结束，停止跟踪
 	if face.TrackState.Tracking {
 		face.SetFrame(&video_find_face.Frame{Count: int(face.VideoInfo.TotalFrame)})
-		face.FrameClose()
 	}
 
+	face.FrameClose()
 	wg.Wait()
 	return nil
 }
