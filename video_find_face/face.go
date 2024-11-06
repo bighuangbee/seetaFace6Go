@@ -39,8 +39,9 @@ type Frame struct {
 
 type TrackState struct {
 	//连续多少帧没检测到人脸
-	EmptyCount int
-	Tracking   bool
+	EmptyCount    int
+	MaxEmptyCount int
+	Tracking      bool
 }
 
 func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFace6go.SeetaImageData) {
@@ -66,6 +67,9 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 		Seeta:         sFace,
 		TargetRect:    targetRect,
 		trackedBuffer: make(chan *Frame, 3),
+		TrackState: TrackState{
+			MaxEmptyCount: 5,
+		},
 	}
 
 	return face

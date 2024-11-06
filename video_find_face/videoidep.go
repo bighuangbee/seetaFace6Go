@@ -35,12 +35,9 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame fl
 
 	fps := videoCapture.Get(gocv.VideoCaptureFPS)
 	totalFrames := videoCapture.Get(gocv.VideoCaptureFrameCount)
-	if totalFrames < 0 {
+	if totalFrames <= 0 {
 		totalFrames = totalFrame
 	}
-
-	start -= fps * 2
-	end += fps * 0.5
 
 	if start >= totalFrames {
 		return fmt.Errorf("开始帧超出范围")
@@ -52,7 +49,7 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame fl
 		end = totalFrames
 	}
 
-	log.Printf("截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %0.1f, 结束帧: %0.1f\n", filepath.Base(videoPath), fps, totalFrames, start, end)
+	log.Printf("裁剪视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %0.1f, 结束帧: %0.1f\n", videoPath, fps, totalFrames, start, end)
 
 	writer, err := gocv.VideoWriterFile(outputPath, "mp4v",
 		fps,

@@ -1,8 +1,11 @@
 package video_find_face
 
 import (
+	"fmt"
 	"gocv.io/x/gocv"
 	"log"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -10,7 +13,7 @@ import (
 func (face *Face) Process(frame *Frame) {
 
 	//帧缓存
-	face.addFrameBuffer(frame)
+	face.AddFrameBuffer(frame)
 	//截取视频
 	face.VideoWrite(frame)
 
@@ -30,6 +33,8 @@ func (face *Face) Process(frame *Frame) {
 			log.Println("StartVideoWriter", err)
 		}
 
+		face.AddTracked(frame)
+
 		//for i, info := range faces {
 		//	// 将人脸框的坐标转换到原图
 		//	originalX := info.Postion.GetX() + face.TargetRect.Min.X
@@ -45,20 +50,12 @@ func (face *Face) Process(frame *Frame) {
 		//		Max: image.Point{originalX + info.Postion.GetWidth(), originalY + info.Postion.GetHeight()},
 		//	}, borderColor, 2)
 		//
-		//	fmt.Println("==track", info.Score, info.Step)
-		//	fmt.Println(fmt.Sprintf("%d_%0.2f_%0.2f_%0.2f.jpg", frameCount, info.FaceInfo.Score, brightness.Score, clarity.Score))
-		//	ok := gocv.IMWrite(filepath.Join("output", fmt.Sprintf("%d_%0.2f_%0.2f_%0.2f.jpg", frame.Count, info.Score, brightness.Score, clarity.Score)), frame.Mat)
-		//	if !ok {
-		//		log.Println("Write image error")
-		//	}
-		//}
 
-		face.AddTracked(frame)
 	} else {
 		//连续x帧检测不到人脸，认为已经过，重置
 		if face.TrackState.Tracking {
 			face.TrackState.EmptyCount++
-			if face.TrackState.EmptyCount > int(face.VideoInfo.FPS) {
+			if face.TrackState.EmptyCount > face.TrackState.MaxEmptyCount {
 				face.TrackState.EmptyCount = 0
 				face.TrackState.Tracking = false
 
@@ -86,7 +83,7 @@ func (face *Face) AddTracked(frame *Frame) {
 
 func (face *Face) GetTrackedProcess(wg *sync.WaitGroup) {
 	for frame := range face.trackedBuffer {
-		face.FrameDetectSave(frame)
+		face.FrameDetect(frame)
 	}
 	wg.Done()
 }
@@ -95,8 +92,7 @@ func (face *Face) FrameClose() {
 	close(face.trackedBuffer)
 }
 
-// 计算有多少个/组游客，确定是否漏检
-func (face *Face) FrameDetectSave(frame *Frame) {
+func (face *Face) FrameDetect(frame *Frame) {
 
 	if frame.Mat != nil {
 		t := time.Now()
@@ -120,16 +116,16 @@ func (face *Face) FrameDetectSave(frame *Frame) {
 	} else {
 		//跟踪结束信号
 
-		face.ResetVideoWriter(frame.Count)
+		videoname := face.ResetVideoWriter(frame.Count)
+
+		picName := filepath.Join(filepath.Dir(videoname),
+			fmt.Sprintf("%s_%0.5f.jpg", strings.ReplaceAll(filepath.Base(videoname), filepath.Ext(videoname), ""), face.bestImage.Score))
+		ok := gocv.IMWrite(picName, *face.bestImage.Mat)
+		log.Println("照片保存, ok:", ok, picName)
 
 		//output/视频文件名 或 output/录像日期/视频文件名
 		//outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, float64(frame.Count))
 		//log.Println("视频片段保存, errInfo:", err, "outputName:", outputName)
-
-		//picName := filepath.Join(filepath.Dir(outputName),
-		//	fmt.Sprintf("%d_%d_%0.5f.jpg", int(face.bestImage.CountStart), int(face.bestImage.Count), face.bestImage.Score))
-		//ok := gocv.IMWrite(picName, *face.bestImage.Mat)
-		//log.Println("照片保存, ok:", ok, picName)
 
 		face.ResetBestFrame()
 	}
@@ -158,7 +154,7 @@ func (face *Face) ResetBestFrame() {
 	face.bestImage = nil
 }
 
-func (face *Face) addFrameBuffer(frame *Frame) {
+func (face *Face) AddFrameBuffer(frame *Frame) {
 	mat := gocv.NewMat()
 	frame.Mat.CopyTo(&mat)
 
@@ -175,7 +171,7 @@ func (face *Face) addFrameBuffer(frame *Frame) {
 	})
 }
 
-func (face *Face) getFramesBuffer() []*Frame {
+func (face *Face) GetFramesBuffer() []*Frame {
 	frames := face.FrameBuffer
 	face.FrameBuffer = nil
 	return frames

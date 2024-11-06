@@ -185,7 +185,7 @@ func videoRecognize(videoPath string) error {
 		timeCount := 0
 		for range ticker.C {
 			timeCount++
-			log.Printf("视频:%s,第%d秒,FPS:%d,已处理%d帧\n", filepath.Base(videoPath), timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
+			log.Printf("DEBUG, 视频名称:%s,第%d秒,FPS:%d,已处理%d帧\n", filepath.Base(videoPath), timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
 			atomic.StoreInt32(&processingCount, 0)
 		}
 	}()

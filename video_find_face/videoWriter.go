@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type VideoWriter struct {
@@ -35,13 +36,28 @@ func NewVideoWriter(info *VideoInfo, startFrame, endFrame float64) (*VideoWriter
 	return &videoWriter, nil
 }
 
-func (face *Face) ResetVideoWriter(endFrame int) {
+func (face *Face) ResetVideoWriter(endFrame int) (videoname string) {
 
-	log.Printf("保存截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %d, 结束帧: %d\n ResetVideoWriter",
+	log.Printf("截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %d, 结束帧: %d\n ResetVideoWriter",
 		filepath.Base(face.VideoWriter.videoname), face.VideoInfo.FPS, face.VideoInfo.TotalFrame, face.VideoWriter.startFrame, endFrame)
 
 	face.VideoWriter.Writer.Close()
+
+	//去尾。头缓存x帧，尾跟踪冗余，5=冗余
+	end := endFrame - face.VideoWriter.startFrame + int(face.VideoInfo.FPS*2) - face.TrackState.MaxEmptyCount
+	if face.VideoWriter.startFrame < int(face.VideoInfo.FPS*2) {
+		end = endFrame - face.VideoWriter.startFrame - face.TrackState.MaxEmptyCount
+	}
+
+	oldName := face.VideoWriter.videoname
+	newName := strings.ReplaceAll(face.VideoWriter.videoname, "_0", fmt.Sprintf("_%d", face.VideoWriter.startFrame+end))
+	go func() {
+		ExtractVideoSegment(oldName, newName, 0, float64(end), 0)
+		os.Remove(oldName)
+	}()
+
 	face.VideoWriter = nil
+	return newName
 }
 
 func (face *Face) StartVideoWriter(startFrame float64) error {
@@ -54,7 +70,7 @@ func (face *Face) StartVideoWriter(startFrame float64) error {
 		face.VideoWriter = w
 
 		//在前追加
-		for _, frame := range face.getFramesBuffer() {
+		for _, frame := range face.GetFramesBuffer() {
 			face.VideoWrite(frame)
 			frame.Mat.Close()
 		}
