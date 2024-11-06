@@ -109,6 +109,8 @@ func processConcurrency(videos []string) {
 	numCPU := runtime.NumCPU()
 	parallelism := numCPU / 4
 
+	parallelism = 1
+
 	var wg sync.WaitGroup
 
 	log.Println("=============并行任务数量:", parallelism)
@@ -161,8 +163,6 @@ func videoRecognize(videoPath string) error {
 		TotalFrame: totalFrame,
 	}
 
-	fmt.Println("--totall", videoCapture.Get(gocv.VideoCaptureFrameCount), videoCapture.Get(gocv.VideoCaptureFrameCount) < 0)
-
 	log.Printf("--------------------------------------------------\n")
 	log.Printf("开始处理视频，文件名: %s, 帧率: %.1f fps, 总帧数: %0.1f\n", face.VideoInfo.Name, face.VideoInfo.FPS, face.VideoInfo.TotalFrame)
 
@@ -179,7 +179,7 @@ func videoRecognize(videoPath string) error {
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go face.FrameProcess(&wg)
+	go face.GetTrackedProcess(&wg)
 
 	go func() {
 		timeCount := 0
@@ -194,16 +194,20 @@ func videoRecognize(videoPath string) error {
 		atomic.AddInt32(&frameCount, 1)
 		atomic.AddInt32(&processingCount, 1)
 
-		if totalFrame < 0 {
-			face.VideoInfo.TotalFrame = float64(atomic.LoadInt32(&frameCount))
-		}
-
 		if ok := videoCapture.Read(&frame); !ok {
 			log.Println("视频结束或无法读取", frameCount)
 			break
 		}
 		if frame.Empty() {
 			continue
+		}
+
+		if totalFrame < 0 {
+			face.VideoInfo.TotalFrame = float64(atomic.LoadInt32(&frameCount))
+		}
+		if atomic.LoadInt32(&frameCount) == 1 {
+			face.VideoInfo.Width = frame.Cols()
+			face.VideoInfo.Height = frame.Rows()
 		}
 
 		face.Process(&video_find_face.Frame{
@@ -222,7 +226,7 @@ func videoRecognize(videoPath string) error {
 
 	// 视频结束，停止跟踪
 	if face.TrackState.Tracking {
-		face.SetFrame(&video_find_face.Frame{Count: int(face.VideoInfo.TotalFrame)})
+		face.AddTracked(&video_find_face.Frame{Count: int(face.VideoInfo.TotalFrame)})
 	}
 
 	face.FrameClose()

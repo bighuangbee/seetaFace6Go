@@ -17,9 +17,17 @@ type Face struct {
 
 	TrackState TrackState
 
-	frames chan *Frame
+	//已跟踪到人脸的视频帧
+	trackedBuffer chan *Frame
 
+	//最佳图像
 	bestImage *Frame
+
+	//视频截取
+	VideoWriter *VideoWriter
+
+	//视频帧缓存，用于视频截取
+	FrameBuffer []*Frame
 }
 
 type Frame struct {
@@ -54,10 +62,10 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_NUMBER_THREADS, 4)
 
 	face := &Face{
-		FaceFeature: FaceFeature,
-		Seeta:       sFace,
-		TargetRect:  targetRect,
-		frames:      make(chan *Frame, 10),
+		FaceFeature:   FaceFeature,
+		Seeta:         sFace,
+		TargetRect:    targetRect,
+		trackedBuffer: make(chan *Frame, 3),
 	}
 
 	return face

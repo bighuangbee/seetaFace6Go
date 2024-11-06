@@ -9,9 +9,10 @@ import (
 )
 
 type VideoInfo struct {
-	Name       string
-	FPS        float64
-	TotalFrame float64
+	Name          string
+	FPS           float64
+	TotalFrame    float64
+	Width, Height int
 }
 
 func (videoInfo *VideoInfo) SaveVideo(startFrame, endFrame float64) (string, error) {
@@ -38,10 +39,8 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame fl
 		totalFrames = totalFrame
 	}
 
-	fmt.Println("====ExtractVideoSegment, totalFrames", totalFrames, "start", start, "totalFrames < 0 ", totalFrames < 0)
-
-	start -= fps * 1.5
-	end += fps * 1
+	start -= fps * 2
+	end += fps * 0.5
 
 	if start >= totalFrames {
 		return fmt.Errorf("开始帧超出范围")
@@ -64,7 +63,7 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame fl
 	}
 	defer writer.Close()
 
-	videoCapture.Set(gocv.VideoCapturePosFrames, float64(start))
+	videoCapture.Set(gocv.VideoCapturePosFrames, start)
 
 	frame := gocv.NewMat()
 	defer frame.Close()
@@ -75,6 +74,11 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame fl
 			break
 		}
 		writer.Write(frame)
+
+		//currentFrame := int(videoCapture.Get(gocv.VideoCapturePosFrames))
+		//fmt.Println("write frameIndex", frameIndex, "currentFrame", currentFrame)
+		//
+		//gocv.IMWrite(fmt.Sprintf("%d.jpg", frameIndex), frame)
 	}
 	return nil
 }
