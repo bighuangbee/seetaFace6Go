@@ -28,7 +28,7 @@ type DetectInfo struct {
 	FaceInfo   *seetaFace6go.SeetaFaceInfo
 }
 
-const ThreadsCount = 1
+const ThreadsCount = 2
 
 func NewSeetaFace(modelPath string, targetRect image.Rectangle) *SeetaFace {
 	seetaFace6go.InitModelPath(modelPath)
@@ -68,6 +68,7 @@ func (face *SeetaFace) NewTracker(width, height int) {
 		face.Tracker.SetInterval(1)
 		face.Tracker.SetThreads(ThreadsCount) //mac: 4
 		face.Tracker.SetMinFaceSize(60)
+		face.Tracker.SetThreshold(0.3)
 	}
 }
 

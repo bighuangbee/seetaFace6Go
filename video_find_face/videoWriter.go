@@ -36,7 +36,7 @@ func NewVideoWriter(info *VideoInfo, startFrame, endFrame float64) (*VideoWriter
 	return &videoWriter, nil
 }
 
-func (face *Face) ResetVideoWriter(endFrame int) (videoname string) {
+func (face *Face) VideoWriterClose(endFrame int) (videoname string) {
 
 	log.Printf("截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %d, 结束帧: %d\n",
 		filepath.Base(face.VideoWriter.videoname), face.VideoInfo.FPS, face.VideoInfo.TotalFrame, face.VideoWriter.startFrame, endFrame)
@@ -88,20 +88,13 @@ func (face *Face) VideoWrite(frame *Frame) {
 		return
 	}
 
-	face.muVideoWriter.RLock()
+	face.muVideoWriter.Lock()
+	defer face.muVideoWriter.Unlock()
+
 	if face.VideoWriter != nil && face.VideoWriter.Writer != nil && face.VideoWriter.Writer.IsOpened() {
-		face.muVideoWriter.RUnlock()
-
-		face.muVideoWriter.Lock()
-		if face.VideoWriter != nil && face.VideoWriter.Writer != nil && face.VideoWriter.Writer.IsOpened() {
-
-			mat := gocv.NewMat()
-			frame.Mat.CopyTo(frame.Mat)
-			face.VideoWriter.Writer.Write(mat)
-			mat.Close()
-			face.muVideoWriter.Unlock()
-		}
-	} else {
-		face.muVideoWriter.RUnlock()
+		mat := gocv.NewMat()
+		frame.Mat.CopyTo(&mat)
+		face.VideoWriter.Writer.Write(mat)
+		mat.Close()
 	}
 }

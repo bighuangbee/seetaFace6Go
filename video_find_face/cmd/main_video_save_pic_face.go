@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"gocv.io/x/gocv"
@@ -47,7 +48,7 @@ func main() {
 	var videoBasePath string
 	fmt.Println(videoBasePath)
 
-	if isVideo(*videoPath) {
+	if isVideoFile(*videoPath) {
 		if strings.HasPrefix(*videoPath, "rtsp") {
 			videoBasePath = video_find_face.ExtractIP(*videoPath)
 		} else {
@@ -93,7 +94,7 @@ func main() {
 			}
 
 			for _, v := range videoFiles {
-				if isVideo(v) {
+				if isVideoFile(v) {
 					videoList = append(videoList, filepath.Join(*videoPath, v))
 				}
 			}
@@ -134,61 +135,72 @@ func processConcurrency(videos []string) {
 	wg.Wait()
 }
 
-func isVideo(videoPath string) bool {
+func isVideoFile(videoPath string) bool {
 	return strings.HasPrefix(videoPath, "rtsp") || strings.HasSuffix(videoPath, ".mp4") || strings.HasSuffix(videoPath, ".dav")
 }
 
-func videoRecognize(videoPath string) error {
-
-	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", image.Rectangle{})
-
-	var videoCapture *gocv.VideoCapture
-	var err error
-
-	if isVideo(videoPath) {
+func OpenVideo(videoPath string) (videoCapture *gocv.VideoCapture, err error) {
+	if isVideoFile(videoPath) {
 		videoCapture, err = gocv.VideoCaptureFile(videoPath)
 	} else {
 		videoCapture, err = gocv.VideoCaptureFile(videoPath)
 	}
 
 	if err != nil {
+		return nil, err
+	}
+	return videoCapture, err
+}
+
+func videoRecognize(videoPath string) error {
+
+	videoCapture, err := OpenVideo(videoPath)
+	if err != nil {
 		return err
 	}
 	defer videoCapture.Close()
 
-	totalFrame := videoCapture.Get(gocv.VideoCaptureFrameCount)
-	face.VideoInfo = &video_find_face.VideoInfo{
-		Name:       videoPath,
-		FPS:        videoCapture.Get(gocv.VideoCaptureFPS),
-		TotalFrame: totalFrame,
-	}
-
-	log.Printf("--------------------------------------------------\n")
-	log.Printf("开始处理视频，文件名: %s, 帧率: %.1f fps, 总帧数: %0.1f\n", face.VideoInfo.Name, face.VideoInfo.FPS, face.VideoInfo.TotalFrame)
-
 	frame := gocv.NewMat()
 	defer frame.Close()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	if ok := videoCapture.Read(&frame); !ok {
+		return errors.New("视频无法读取")
+	}
+
+	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", image.Rectangle{})
+	face.Seeta.NewTracker(frame.Cols(), frame.Rows())
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go face.TrackedProcess(&wg)
+
+	face.VideoInfo = &video_find_face.VideoInfo{
+		Name:       videoPath,
+		FPS:        videoCapture.Get(gocv.VideoCaptureFPS),
+		TotalFrame: videoCapture.Get(gocv.VideoCaptureFrameCount),
+		Width:      frame.Cols(),
+		Height:     frame.Rows(),
+	}
 
 	//帧计数器
 	frameCount := int32(0)
 	//FPS计数器
 	processingCount := int32(0)
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go face.GetTrackedProcess(&wg)
-
 	go func() {
 		timeCount := 0
+
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		for range ticker.C {
 			timeCount++
 			log.Printf("DEBUG, 视频名称:%s,第%d秒,FPS:%d,已处理%d帧\n", filepath.Base(videoPath), timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
 			atomic.StoreInt32(&processingCount, 0)
 		}
 	}()
+
+	log.Printf("--------------------------------------------------\n")
+	log.Printf("开始处理视频，文件名: %s, 帧率: %.1f fps, 总帧数: %0.1f\n", face.VideoInfo.Name, face.VideoInfo.FPS, face.VideoInfo.TotalFrame)
 
 	for {
 		atomic.AddInt32(&frameCount, 1)
@@ -202,12 +214,8 @@ func videoRecognize(videoPath string) error {
 			continue
 		}
 
-		if totalFrame < 0 {
+		if face.VideoInfo.TotalFrame < 0 {
 			face.VideoInfo.TotalFrame = float64(atomic.LoadInt32(&frameCount))
-		}
-		if atomic.LoadInt32(&frameCount) == 1 {
-			face.VideoInfo.Width = frame.Cols()
-			face.VideoInfo.Height = frame.Rows()
 		}
 
 		face.Process(&video_find_face.Frame{
@@ -226,10 +234,10 @@ func videoRecognize(videoPath string) error {
 
 	// 视频结束，停止跟踪
 	if face.TrackState.Tracking {
-		face.AddTracked(&video_find_face.Frame{Count: int(face.VideoInfo.TotalFrame)})
+		face.StopTrack(int(face.VideoInfo.TotalFrame))
 	}
 
-	face.FrameClose()
+	face.TrackedProcessClose()
 	wg.Wait()
 	return nil
 }

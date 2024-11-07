@@ -18,7 +18,7 @@ func (face *Face) Process(frame *Frame) {
 	face.VideoWrite(frame)
 
 	//t := time.Now()
-	face.Seeta.NewTracker(frame.Mat.Cols(), frame.Mat.Rows())
+
 	img := frame.ToSeetaImage(face.TargetRect)
 	faces := face.Seeta.Tracker.Track(img)
 
@@ -59,8 +59,7 @@ func (face *Face) Process(frame *Frame) {
 				face.TrackState.EmptyCount = 0
 				face.TrackState.Tracking = false
 
-				frame.Mat = nil
-				face.AddTracked(frame)
+				face.StopTrack(frame.Count)
 			}
 		}
 	}
@@ -81,14 +80,18 @@ func (face *Face) AddTracked(frame *Frame) {
 	}
 }
 
-func (face *Face) GetTrackedProcess(wg *sync.WaitGroup) {
+func (face *Face) StopTrack(count int) {
+	face.AddTracked(&Frame{Count: count})
+}
+
+func (face *Face) TrackedProcess(wg *sync.WaitGroup) {
 	for frame := range face.trackedBuffer {
 		face.FrameDetect(frame)
 	}
 	wg.Done()
 }
 
-func (face *Face) FrameClose() {
+func (face *Face) TrackedProcessClose() {
 	close(face.trackedBuffer)
 }
 
@@ -114,9 +117,9 @@ func (face *Face) FrameDetect(frame *Frame) {
 
 		//frame.Mat.Close()
 	} else {
-		//跟踪结束信号
+		//跟踪结束
 
-		videoname := face.ResetVideoWriter(frame.Count)
+		videoname := face.VideoWriterClose(frame.Count)
 
 		picName := filepath.Join(filepath.Dir(videoname),
 			fmt.Sprintf("%s_%0.5f.jpg", strings.ReplaceAll(filepath.Base(videoname), filepath.Ext(videoname), ""), face.bestImage.Score))
