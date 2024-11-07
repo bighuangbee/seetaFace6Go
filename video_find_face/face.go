@@ -5,6 +5,7 @@ import (
 	"gocv.io/x/gocv"
 	"image"
 	"seetaFace6go"
+	"sync"
 	"video-find-face/seetaFace"
 )
 
@@ -24,7 +25,8 @@ type Face struct {
 	bestImage *Frame
 
 	//视频截取
-	VideoWriter *VideoWriter
+	VideoWriter   *VideoWriter
+	muVideoWriter sync.RWMutex
 
 	//视频帧缓存，用于视频截取
 	FrameBuffer []*Frame
