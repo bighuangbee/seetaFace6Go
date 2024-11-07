@@ -110,9 +110,11 @@ func (face *Face) FrameDetect(frame *Frame) {
 					}
 				}
 			}
+
+			face.SetBestFrame(frame)
+
 			log.Printf("###Detect, count: %d, faceLen: %d, time: %d, topScore: %0.5f \n",
 				frame.Count, len(infos), time.Since(t).Milliseconds(), frame.Score)
-			face.SetBestFrame(frame)
 		}
 
 		//frame.Mat.Close()
@@ -121,10 +123,12 @@ func (face *Face) FrameDetect(frame *Frame) {
 
 		videoname := face.VideoWriterClose(frame.Count)
 
-		picName := filepath.Join(filepath.Dir(videoname),
-			fmt.Sprintf("%s_%0.5f.jpg", strings.ReplaceAll(filepath.Base(videoname), filepath.Ext(videoname), ""), face.bestImage.Score))
-		ok := gocv.IMWrite(picName, *face.bestImage.Mat)
-		log.Println("照片保存, ok:", ok, picName)
+		if face.bestImage != nil {
+			picName := filepath.Join(filepath.Dir(videoname),
+				fmt.Sprintf("%s_%0.5f.jpg", strings.ReplaceAll(filepath.Base(videoname), filepath.Ext(videoname), ""), face.bestImage.Score))
+			ok := gocv.IMWrite(picName, *face.bestImage.Mat)
+			log.Println("照片保存, ok:", ok, picName)
+		}
 
 		//output/视频文件名 或 output/录像日期/视频文件名
 		//outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, float64(frame.Count))
@@ -153,7 +157,6 @@ func (face *Face) SetBestFrame(f *Frame) {
 }
 
 func (face *Face) ResetBestFrame() {
-	face.bestImage.CountStart = 0
 	face.bestImage = nil
 }
 

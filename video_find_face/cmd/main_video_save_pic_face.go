@@ -103,18 +103,17 @@ func main() {
 	}
 
 	processConcurrency(videoList)
-
 }
 
 func processConcurrency(videos []string) {
 	numCPU := runtime.NumCPU()
 	parallelism := numCPU / 4
 
-	parallelism = 1
+	parallelism = 2
 
 	var wg sync.WaitGroup
 
-	log.Println("=============并行任务数量:", parallelism)
+	log.Println("=============并行任务数量:", parallelism, "numCPU:", numCPU)
 
 	sem := make(chan struct{}, parallelism)
 
@@ -167,7 +166,13 @@ func videoRecognize(videoPath string) error {
 		return errors.New("视频无法读取")
 	}
 
-	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", image.Rectangle{})
+	min := image.Point{0, 600}
+	var targetRect = image.Rectangle{
+		Min: min,
+		Max: image.Point{min.X + 3840*2/3, min.Y + 2160*2/3},
+	}
+
+	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", targetRect)
 	face.Seeta.NewTracker(frame.Cols(), frame.Rows())
 
 	wg := sync.WaitGroup{}
@@ -230,14 +235,12 @@ func videoRecognize(videoPath string) error {
 		//}
 	}
 
-	face.Seeta.ResetTracker()
-
 	// 视频结束，停止跟踪
 	if face.TrackState.Tracking {
 		face.StopTrack(int(face.VideoInfo.TotalFrame))
 	}
-
 	face.TrackedProcessClose()
+
 	wg.Wait()
 	return nil
 }

@@ -28,7 +28,7 @@ type DetectInfo struct {
 	FaceInfo   *seetaFace6go.SeetaFaceInfo
 }
 
-const ThreadsCount = 2
+const ThreadsCount = 1
 
 func NewSeetaFace(modelPath string, targetRect image.Rectangle) *SeetaFace {
 	seetaFace6go.InitModelPath(modelPath)

@@ -41,7 +41,9 @@ func (face *Face) VideoWriterClose(endFrame int) (videoname string) {
 	log.Printf("截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %d, 结束帧: %d\n",
 		filepath.Base(face.VideoWriter.videoname), face.VideoInfo.FPS, face.VideoInfo.TotalFrame, face.VideoWriter.startFrame, endFrame)
 
+	face.muVideoWriter.Lock()
 	face.VideoWriter.Writer.Close()
+	face.muVideoWriter.Unlock()
 
 	//去尾。头缓存x帧，尾跟踪冗余，5=冗余
 	end := endFrame - face.VideoWriter.startFrame + int(face.VideoInfo.FPS*2) - face.TrackState.MaxEmptyCount
@@ -68,6 +70,7 @@ func (face *Face) StartVideoWriter(startFrame float64) error {
 	if face.VideoWriter == nil {
 		w, err := NewVideoWriter(face.VideoInfo, startFrame, 0)
 		if err != nil {
+			face.muVideoWriter.Unlock()
 			return err
 		}
 

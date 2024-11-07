@@ -16,3 +16,16 @@ export CGO_LDFLAGS="-L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_hig
 */
 
 //go run . "rtsp://admin:Ab123456.@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0"
+
+
+apt update && \
+apt install -y \
+libgtk2.0-dev \
+libdc1394-22-dev \
+libavcodec-dev \
+libavformat-dev \
+libavutil-dev \
+libswscale-dev \
+libjpeg-dev \
+libpng-dev \
+libtiff-dev
