@@ -17,6 +17,10 @@ export CGO_LDFLAGS="-L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_hig
 
 //go run . "rtsp://admin:Ab123456.@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0"
 
+# 替换为 %23
+
+##前台
+rtsp://admin:20230106#Jk@192.168.80.13:554/h264/ch1/main/av_stream
 
 apt update && \
 apt install -y \

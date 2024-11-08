@@ -1,11 +1,8 @@
 package video_find_face
 
 import (
-	"fmt"
 	"gocv.io/x/gocv"
 	"log"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 )
@@ -99,40 +96,51 @@ func (face *Face) FrameDetect(frame *Frame) {
 
 	if frame.Mat != nil {
 		t := time.Now()
-		infos := face.Seeta.Detect(frame.ToSeetaImage(face.TargetRect))
+		infos, err := face.RecognizeFrame(frame)
+		if err != nil {
+			log.Println("RecognizeFrame", err)
+			return
+		}
 		if len(infos) > 0 {
 			for _, info := range infos {
 				if frame.Score == 0 {
-					frame.Score = info.FaceInfo.Score
+					frame.Score = info.Quality
 				} else {
-					if frame.Score < info.FaceInfo.Score {
-						frame.Score = info.FaceInfo.Score
+					if frame.Score < info.Quality {
+						frame.Score = info.Quality
 					}
 				}
 			}
 
-			face.SetBestFrame(frame)
+			if face.bestImage != nil && face.FaceFeature != nil {
 
-			log.Printf("###Detect, count: %d, faceLen: %d, time: %d, topScore: %0.5f \n",
-				frame.Count, len(infos), time.Since(t).Milliseconds(), frame.Score)
+				fe2, err := face.Recognize(*face.bestImage.Mat)
+				if err != nil {
+					log.Println("ExtractFeature", err)
+				}
+				log.Printf("###ExtractFeature bestImage, count: %d, faceLen: %d, time: %d\n",
+					frame.Count, len(fe2), time.Since(t).Milliseconds())
+
+				for _, entity := range infos {
+					for _, entiry2 := range fe2 {
+						match := face.FaceFeature.CompareFeature(entity, entiry2)
+						log.Println("=== CompareFeature", match)
+					}
+
+				}
+			}
+
+			face.SetBestFrame(frame)
 		}
+
+		log.Printf("###Detect, count: %d, faceLen: %d, time: %d, topScore: %0.5f \n",
+			frame.Count, len(infos), time.Since(t).Milliseconds(), frame.Score)
 
 		//frame.Mat.Close()
 	} else {
 		//跟踪结束
 
-		videoname := face.VideoWriterClose(frame.Count)
-
-		if face.bestImage != nil {
-			picName := filepath.Join(filepath.Dir(videoname),
-				fmt.Sprintf("%s_%0.5f.jpg", strings.ReplaceAll(filepath.Base(videoname), filepath.Ext(videoname), ""), face.bestImage.Score))
-			ok := gocv.IMWrite(picName, *face.bestImage.Mat)
-			log.Println("照片保存, ok:", ok, picName)
-		}
-
-		//output/视频文件名 或 output/录像日期/视频文件名
-		//outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, float64(frame.Count))
-		//log.Println("视频片段保存, errInfo:", err, "outputName:", outputName)
+		face.VideoWriterClose(frame.Count)
 
 		face.ResetBestFrame()
 	}

@@ -48,7 +48,7 @@ func main() {
 	var videoBasePath string
 	fmt.Println(videoBasePath)
 
-	if isVideoFile(*videoPath) {
+	if video_find_face.IsVideo(*videoPath) {
 		if strings.HasPrefix(*videoPath, "rtsp") {
 			videoBasePath = video_find_face.ExtractIP(*videoPath)
 		} else {
@@ -94,7 +94,7 @@ func main() {
 			}
 
 			for _, v := range videoFiles {
-				if isVideoFile(v) {
+				if video_find_face.IsVideo(v) {
 					videoList = append(videoList, filepath.Join(*videoPath, v))
 				}
 			}
@@ -134,26 +134,9 @@ func processConcurrency(videos []string) {
 	wg.Wait()
 }
 
-func isVideoFile(videoPath string) bool {
-	return strings.HasPrefix(videoPath, "rtsp") || strings.HasSuffix(videoPath, ".mp4") || strings.HasSuffix(videoPath, ".dav")
-}
-
-func OpenVideo(videoPath string) (videoCapture *gocv.VideoCapture, err error) {
-	if isVideoFile(videoPath) {
-		videoCapture, err = gocv.VideoCaptureFile(videoPath)
-	} else {
-		videoCapture, err = gocv.VideoCaptureFile(videoPath)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	return videoCapture, err
-}
-
 func videoRecognize(videoPath string) error {
 
-	videoCapture, err := OpenVideo(videoPath)
+	videoCapture, err := video_find_face.OpenVideo(videoPath)
 	if err != nil {
 		return err
 	}
@@ -171,6 +154,8 @@ func videoRecognize(videoPath string) error {
 		Min: min,
 		Max: image.Point{min.X + 3840*2/3, min.Y + 2160*2/3},
 	}
+
+	targetRect = image.Rectangle{}
 
 	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", targetRect)
 	face.Seeta.NewTracker(frame.Cols(), frame.Rows())
@@ -195,11 +180,16 @@ func videoRecognize(videoPath string) error {
 	go func() {
 		timeCount := 0
 
+		videoName := filepath.Base(videoPath)
+		if video_find_face.IsVideoStream(videoPath) {
+			videoName = video_find_face.ExtractIP(videoPath)
+		}
+
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			timeCount++
-			log.Printf("DEBUG, 视频名称:%s,第%d秒,FPS:%d,已处理%d帧\n", filepath.Base(videoPath), timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
+			log.Printf("DEBUG, 视频名称:%s,第%d秒,FPS:%d,已处理%d帧\n", videoName, timeCount, atomic.LoadInt32(&processingCount), atomic.LoadInt32(&frameCount))
 			atomic.StoreInt32(&processingCount, 0)
 		}
 	}()

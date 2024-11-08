@@ -4,8 +4,10 @@ import (
 	"face_recognize/recognize/face_rec"
 	"gocv.io/x/gocv"
 	"image"
+	"log"
 	"seetaFace6go"
 	"sync"
+	"video-find-face/faceRec"
 	"video-find-face/seetaFace"
 )
 
@@ -25,7 +27,7 @@ type Face struct {
 	bestImage *Frame
 
 	//视频截取
-	VideoWriter   *VideoWriter
+	VideoWriter   VideoWriter
 	muVideoWriter sync.RWMutex
 
 	//视频帧缓存，用于视频截取
@@ -54,11 +56,11 @@ var Output = "./output"
 
 func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 	var FaceFeature face_rec.IFaceFeature
-	//var err error
-	//FaceFeature, err = faceRec.New("/root/face_recognize/Recognize/libs/face_gpu/models")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	var err error
+	FaceFeature, err = faceRec.New("/root/face_recognize/Recognize/libs/face_gpu/models")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	sFace := seetaFace.NewSeetaFace(sFaceModel, targetRect)
 	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_MIN_FACE_SIZE, 60)
@@ -70,7 +72,7 @@ func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 		TargetRect:    targetRect,
 		trackedBuffer: make(chan *Frame, 3),
 		TrackState: TrackState{
-			MaxEmptyCount: 5,
+			MaxEmptyCount: 15,
 		},
 	}
 

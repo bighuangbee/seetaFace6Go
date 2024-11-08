@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type VideoInfo struct {
@@ -78,4 +79,25 @@ func ExtractVideoSegment(videoPath, outputPath string, start, end, totalFrame fl
 		//gocv.IMWrite(fmt.Sprintf("%d.jpg", frameIndex), frame)
 	}
 	return nil
+}
+
+func IsVideo(videoPath string) bool {
+	return strings.HasPrefix(videoPath, "rtsp") || strings.HasSuffix(videoPath, ".mp4") || strings.HasSuffix(videoPath, ".dav")
+}
+
+func IsVideoStream(videoPath string) bool {
+	return strings.HasPrefix(videoPath, "rtsp")
+}
+
+func OpenVideo(videoPath string) (videoCapture *gocv.VideoCapture, err error) {
+	if IsVideo(videoPath) {
+		videoCapture, err = gocv.VideoCaptureFile(videoPath)
+	} else {
+		videoCapture, err = gocv.VideoCaptureFile(videoPath)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return videoCapture, err
 }
