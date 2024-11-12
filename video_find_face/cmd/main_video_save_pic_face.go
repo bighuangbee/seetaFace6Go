@@ -155,14 +155,17 @@ func videoRecognize(videoPath string) error {
 		Max: image.Point{min.X + 3840*2/3, min.Y + 2160*2/3},
 	}
 
-	targetRect = image.Rectangle{}
+	targetRect = image.Rectangle{
+		Min: image.Point{0, 0},
+		Max: image.Point{frame.Cols(), frame.Rows()},
+	}
 
 	face := video_find_face.NewFace("../../seetaFace6Warp/seeta/models", targetRect)
-	face.Seeta.NewTracker(frame.Cols(), frame.Rows())
+	face.Seeta.NewTracker(targetRect.Max.X, targetRect.Max.Y)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go face.TrackedProcess(&wg)
+	go face.ProcessRecognize(&wg)
 
 	face.VideoInfo = &video_find_face.VideoInfo{
 		Name:       videoPath,
@@ -213,7 +216,7 @@ func videoRecognize(videoPath string) error {
 			face.VideoInfo.TotalFrame = float64(atomic.LoadInt32(&frameCount))
 		}
 
-		face.Process(&video_find_face.Frame{
+		face.Tracking(&video_find_face.Frame{
 			Mat:   &frame,
 			Count: int(atomic.LoadInt32(&frameCount)),
 		})
@@ -227,9 +230,9 @@ func videoRecognize(videoPath string) error {
 
 	// 视频结束，停止跟踪
 	if face.TrackState.Tracking {
-		face.StopTrack(int(face.VideoInfo.TotalFrame))
+		face.StopTracking(int(face.VideoInfo.TotalFrame))
 	}
-	face.TrackedProcessClose()
+	face.CloseTrackedBuffer()
 
 	wg.Wait()
 	return nil

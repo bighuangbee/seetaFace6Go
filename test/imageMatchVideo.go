@@ -39,7 +39,7 @@ func init() {
 func main() {
 
 	//frame := gocv.IMRead("./testData/duo6.jpeg", gocv.IMReadColor)
-	//features, err := faceRec.Recognize(frame)
+	//features, err := faceRec.ExtractFeatureGPU(frame)
 	//
 	//fmt.Println(err, len(features))
 	//return
@@ -82,7 +82,7 @@ func main() {
 		}
 		features, err := faceRec.Recognize(frame)
 		if err != nil {
-			fmt.Println("faceRec.Recognize", err)
+			fmt.Println("faceRec.ExtractFeatureGPU", err)
 			continue
 		}
 
@@ -132,7 +132,7 @@ func readVideoAndRecognize(targetFeatures [][]float32, videoFilename string) err
 		start := time.Now()
 		faces, err := faceRec.Detect(frame)
 		if err != nil {
-			fmt.Println("Recognize", err)
+			fmt.Println("ExtractFeatureGPU", err)
 			continue
 		}
 
@@ -151,7 +151,7 @@ func readVideoAndRecognize(targetFeatures [][]float32, videoFilename string) err
 
 				features, err := faceRec.Recognize(frame)
 				if err != nil {
-					fmt.Println("faceRec.Recognize", err)
+					fmt.Println("faceRec.ExtractFeatureGPU", err)
 					continue
 				}
 

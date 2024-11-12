@@ -40,7 +40,7 @@ func main() {
 			continue
 		}
 		mat := gocv.IMRead(filepath.Join(*regPath, filename), gocv.IMReadColor)
-		fe, err := face.Recognize(mat)
+		fe, err := face.ExtractFeatureGPU(mat)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -58,7 +58,7 @@ func main() {
 		fs = append(fs, fe...)
 	}
 
-	err := face.FaceFeature.SetFeatures(fs)
+	err := face.RecognizeGpu.SetFeatures(fs)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -73,7 +73,7 @@ func main() {
 			continue
 		}
 		mat := gocv.IMRead(filepath.Join(*searchPath, filename), gocv.IMReadColor)
-		fe, err := face.Recognize(mat)
+		fe, err := face.ExtractFeatureGPU(mat)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -87,7 +87,7 @@ func main() {
 		}
 
 		for _, entity := range fe {
-			results, err := face.FaceFeature.CompareFeaturesByRegister(entity, 10, 0.6)
+			results, err := face.RecognizeGpu.CompareFeaturesByRegister(entity, 10, 0.6)
 			if err != nil {
 				fmt.Println(err)
 				continue

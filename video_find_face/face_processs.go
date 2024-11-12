@@ -4,10 +4,9 @@ import (
 	"gocv.io/x/gocv"
 	"log"
 	"sync"
-	"time"
 )
 
-func (face *Face) Process(frame *Frame) {
+func (face *Face) Tracking(frame *Frame) {
 
 	//帧缓存
 	face.AddFrameBuffer(frame)
@@ -30,7 +29,7 @@ func (face *Face) Process(frame *Frame) {
 			log.Println("StartVideoWriter", err)
 		}
 
-		face.AddTracked(frame)
+		face.AddRecognize(frame)
 
 		//for i, info := range faces {
 		//	// 将人脸框的坐标转换到原图
@@ -56,13 +55,13 @@ func (face *Face) Process(frame *Frame) {
 				face.TrackState.EmptyCount = 0
 				face.TrackState.Tracking = false
 
-				face.StopTrack(frame.Count)
+				face.StopTracking(frame.Count)
 			}
 		}
 	}
 }
 
-func (face *Face) AddTracked(frame *Frame) {
+func (face *Face) AddRecognize(frame *Frame) {
 	if frame.Mat != nil {
 		mat := gocv.NewMat()
 		frame.Mat.CopyTo(&mat)
@@ -77,73 +76,19 @@ func (face *Face) AddTracked(frame *Frame) {
 	}
 }
 
-func (face *Face) StopTrack(count int) {
-	face.AddTracked(&Frame{Count: count})
+func (face *Face) StopTracking(count int) {
+	face.AddRecognize(&Frame{Count: count})
 }
 
-func (face *Face) TrackedProcess(wg *sync.WaitGroup) {
-	for frame := range face.trackedBuffer {
-		face.FrameDetect(frame)
-	}
-	wg.Done()
-}
-
-func (face *Face) TrackedProcessClose() {
+func (face *Face) CloseTrackedBuffer() {
 	close(face.trackedBuffer)
 }
 
-func (face *Face) FrameDetect(frame *Frame) {
-
-	if frame.Mat != nil {
-		t := time.Now()
-		infos, err := face.RecognizeFrame(frame)
-		if err != nil {
-			log.Println("RecognizeFrame", err)
-			return
-		}
-		if len(infos) > 0 {
-			for _, info := range infos {
-				if frame.Score == 0 {
-					frame.Score = info.Quality
-				} else {
-					if frame.Score < info.Quality {
-						frame.Score = info.Quality
-					}
-				}
-			}
-
-			if face.bestImage != nil && face.FaceFeature != nil {
-
-				fe2, err := face.Recognize(*face.bestImage.Mat)
-				if err != nil {
-					log.Println("ExtractFeature", err)
-				}
-				log.Printf("###ExtractFeature bestImage, count: %d, faceLen: %d, time: %d\n",
-					frame.Count, len(fe2), time.Since(t).Milliseconds())
-
-				for _, entity := range infos {
-					for _, entiry2 := range fe2 {
-						match := face.FaceFeature.CompareFeature(entity, entiry2)
-						log.Println("=== CompareFeature", match)
-					}
-
-				}
-			}
-
-			face.SetBestFrame(frame)
-		}
-
-		log.Printf("###Detect, count: %d, faceLen: %d, time: %d, topScore: %0.5f \n",
-			frame.Count, len(infos), time.Since(t).Milliseconds(), frame.Score)
-
-		//frame.Mat.Close()
-	} else {
-		//跟踪结束
-
-		face.VideoWriterClose(frame.Count)
-
-		face.ResetBestFrame()
+func (face *Face) ProcessRecognize(wg *sync.WaitGroup) {
+	for frame := range face.trackedBuffer {
+		face.Recognize(frame)
 	}
+	wg.Done()
 }
 
 func (face *Face) SetBestFrame(f *Frame) {

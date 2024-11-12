@@ -42,7 +42,7 @@ func NewFaceRecognizer(modelType ModelType) *FaceRecognizer {
 		ptr:      C.facerecognizer_new(cs),
 		FaceType: modelType,
 	}
-	fr.SetProperty(FaceRecognizer_PROPERTY_NUMBER_THREADS, 8)
+	fr.SetProperty(FaceRecognizer_PROPERTY_NUMBER_THREADS, 2)
 
 	fr.FeatureSize = fr.getExtractFeatureSize()
 	return fr

@@ -1,4 +1,4 @@
-package faceRec
+package rec_gpu
 
 import (
 	"face_recognize/recognize/face_rec"

@@ -7,14 +7,14 @@ import (
 	"log"
 	"seetaFace6go"
 	"sync"
-	"video-find-face/faceRec"
+	"video-find-face/rec_gpu"
 	"video-find-face/seetaFace"
 )
 
 type Face struct {
-	Seeta       *seetaFace.SeetaFace
-	FaceFeature face_rec.IFaceFeature
-	TargetRect  image.Rectangle
+	Seeta        *seetaFace.SeetaFace
+	RecognizeGpu face_rec.IFaceFeature
+	TargetRect   image.Rectangle
 
 	VideoInfo *VideoInfo
 
@@ -52,22 +52,18 @@ func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFac
 	return seetaFace.ToSeetaImage(*frame.Mat, targetRect)
 }
 
-var Output = "./output"
-
 func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
 	var FaceFeature face_rec.IFaceFeature
 	var err error
-	FaceFeature, err = faceRec.New("/root/face_recognize/Recognize/libs/face_gpu/models")
+	FaceFeature, err = rec_gpu.New("/root/face_recognize/recognize/libs/face_gpu/models")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	sFace := seetaFace.NewSeetaFace(sFaceModel, targetRect)
-	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_MIN_FACE_SIZE, 60)
-	sFace.Detector.SetProperty(seetaFace6go.FaceDetector_PROPERTY_NUMBER_THREADS, 4)
 
 	face := &Face{
-		FaceFeature:   FaceFeature,
+		RecognizeGpu:  FaceFeature,
 		Seeta:         sFace,
 		TargetRect:    targetRect,
 		trackedBuffer: make(chan *Frame, 3),

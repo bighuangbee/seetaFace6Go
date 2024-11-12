@@ -35,6 +35,8 @@ func NewSeetaFace(modelPath string, targetRect image.Rectangle) *SeetaFace {
 
 	// 人脸检测器
 	fd := seetaFace6go.NewFaceDetector()
+	fd.SetProperty(seetaFace6go.FaceDetector_PROPERTY_MIN_FACE_SIZE, 60)
+	fd.SetProperty(seetaFace6go.FaceDetector_PROPERTY_NUMBER_THREADS, 1)
 
 	// 人脸特征定位器
 	// 使用5点信息模型
@@ -42,6 +44,7 @@ func NewSeetaFace(modelPath string, targetRect image.Rectangle) *SeetaFace {
 
 	// 人脸特征提取器
 	fr := seetaFace6go.NewFaceRecognizer(seetaFace6go.ModelType_light)
+	fr.SetProperty(seetaFace6go.FaceRecognizer_PROPERTY_NUMBER_THREADS, 1)
 
 	// 质量评估器
 	qr := seetaFace6go.NewQualityCheck()
@@ -68,7 +71,7 @@ func (face *SeetaFace) NewTracker(width, height int) {
 		face.Tracker.SetInterval(1)
 		face.Tracker.SetThreads(ThreadsCount) //mac: 4
 		face.Tracker.SetMinFaceSize(60)
-		face.Tracker.SetThreshold(0.3)
+		face.Tracker.SetThreshold(0.5)
 	}
 }
 
@@ -86,8 +89,6 @@ func (face *SeetaFace) Detect(img *seetaFace6go.SeetaImageData) (infos []*Detect
 			clarity := face.QualityCheck.CheckClarity(img, info.Postion, pointInfo)
 			integrity := face.QualityCheck.CheckIntegrity(img, info.Postion, pointInfo)
 
-			//ok, _ := face.Seeta.Recognizer.Extract(img, pointInfo)
-
 			infos = append(infos, &DetectInfo{
 				Confidence: info.Score,
 				Clarity:    clarity.Score,
@@ -96,10 +97,6 @@ func (face *SeetaFace) Detect(img *seetaFace6go.SeetaImageData) (infos []*Detect
 				FaceInfo:   info,
 			})
 		}
-
-		//if face.FaceFeature != nil {
-		//	go face.RecognizeFrame(frame.Mat, frame.Count, pids)
-		//}
 	}
 
 	return infos
