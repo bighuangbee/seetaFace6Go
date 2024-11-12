@@ -45,33 +45,12 @@ func (face *Face) VideoWriterClose(endFrame int) {
 	face.VideoWriter.Writer = nil
 	face.muVideoWriter.Unlock()
 
-	//去尾。头缓存x帧，尾跟踪冗余，5=冗余
-	end := endFrame - face.VideoWriter.startFrame + int(face.VideoInfo.FPS*2) - face.TrackState.MaxEmptyCount
-	if face.VideoWriter.startFrame < int(face.VideoInfo.FPS*2) {
-		end = endFrame - face.VideoWriter.startFrame
-	}
-
-	oldName := face.VideoWriter.videoname
-	newName := filepath.Join(filepath.Dir(face.VideoWriter.videoname),
-		strings.ReplaceAll(filepath.Base(face.VideoWriter.videoname), "_0", fmt.Sprintf("_%d", face.VideoWriter.startFrame+end)))
-	go func() {
-		ExtractVideoSegment(oldName, newName, 0, float64(end), 0)
-		os.Remove(oldName)
-	}()
-
 	if face.bestImage != nil {
 		picName := filepath.Join(filepath.Dir(face.VideoWriter.videoname),
 			fmt.Sprintf("%s_%0.5f.jpg", strings.ReplaceAll(filepath.Base(face.VideoWriter.videoname), filepath.Ext(face.VideoWriter.videoname), ""), face.bestImage.Score))
 		ok := gocv.IMWrite(picName, *face.bestImage.Mat)
 		log.Println("保存照片, ok:", ok, picName)
 	}
-
-	//output/视频文件名 或 output/录像日期/视频文件名
-	//outputName, err := face.VideoInfo.SaveVideo(face.bestImage.CountStart, float64(frame.Count))
-	//log.Println("视频片段保存, errInfo:", err, "outputName:", outputName)
-
-	face.muVideoWriter.Lock()
-	face.muVideoWriter.Unlock()
 }
 
 func (face *Face) StartVideoWriter(startFrame float64) (err error) {

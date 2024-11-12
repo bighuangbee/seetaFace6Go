@@ -18,6 +18,11 @@ facetracker *facetracker_new(char *model, int video_width, int video_height)
         seeta::FaceTracker *cls = new seeta::FaceTracker(setting, video_width, video_height);
         // 保存人脸识别器对象指针
         ft->cls = (void *)cls;
+
+           std::cout << "Initializing facetracker with model: " << model
+                          << ", video width: " << video_width
+                          << ", video height: " << video_height
+                          << ", device: GPU" << std::endl;
     }
     catch (const std::exception &e)
     {

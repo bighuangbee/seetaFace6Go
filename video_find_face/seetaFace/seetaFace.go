@@ -71,7 +71,7 @@ func (face *SeetaFace) NewTracker(width, height int) {
 		face.Tracker.SetInterval(1)
 		face.Tracker.SetThreads(ThreadsCount) //mac: 4
 		face.Tracker.SetMinFaceSize(60)
-		face.Tracker.SetThreshold(0.5)
+		face.Tracker.SetThreshold(0.3)
 	}
 }
 

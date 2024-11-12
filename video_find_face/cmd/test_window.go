@@ -29,12 +29,12 @@ func main() {
 	frame := gocv.NewMat()
 	defer frame.Close()
 
-	min := image.Point{0, 600}
+	min := image.Point{0, 500}
 	var targetRect = image.Rectangle{
 		Min: min,
 		Max: image.Point{min.X + 3840*2/3, min.Y + 2160*2/3},
 	}
-	targetRect = image.Rectangle{}
+	//targetRect = image.Rectangle{}
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -75,9 +75,9 @@ func main() {
 			continue
 		}
 
-		if frameCount < 35*15 {
-			continue
-		}
+		//if frameCount < 35*15 {
+		//	continue
+		//}
 
 		t1 := time.Now()
 		face.Seeta.NewTracker(frame.Cols(), frame.Rows())

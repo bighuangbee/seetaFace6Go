@@ -2,21 +2,17 @@ package video_find_face
 
 import (
 	"face_recognize/recognize/face_rec"
-	"fmt"
 	"gocv.io/x/gocv"
 	"image"
 	"log"
 	"time"
 )
 
-func (face *Face) Recognize(frame *Frame) {
+func (face *Face) Recognize(frame *Frame) (infos []*face_rec.FaceEntity, err error) {
 	if frame.Mat != nil {
 		t := time.Now()
 
-		var infos []*face_rec.FaceEntity
-		var err error
 		if face.RecognizeGpu != nil {
-			fmt.Println("======RecognizeGpu ")
 			infos, err = RecognizeGpu(face.RecognizeGpu, *frame.Mat)
 		} else {
 			results := face.Seeta.Detect(frame.ToSeetaImage(face.TargetRect))
@@ -50,8 +46,6 @@ func (face *Face) Recognize(frame *Frame) {
 				if err != nil {
 					log.Println("ExtractFeatureGPU error", err)
 				}
-				log.Printf("###ExtractFeatureGPU bestImage, count: %d, faceLen: %d, time: %d\n",
-					frame.Count, len(fe2), time.Since(t).Milliseconds())
 
 				for _, entity := range infos {
 					for _, entiry2 := range fe2 {
@@ -72,6 +66,8 @@ func (face *Face) Recognize(frame *Frame) {
 		face.VideoWriterClose(frame.Count)
 		face.ResetBestFrame()
 	}
+
+	return infos, err
 }
 
 func RecognizeGpu(faceRec face_rec.IFaceFeature, frame gocv.Mat) ([]*face_rec.FaceEntity, error) {

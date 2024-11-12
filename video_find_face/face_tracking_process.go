@@ -3,7 +3,7 @@ package video_find_face
 import (
 	"gocv.io/x/gocv"
 	"log"
-	"sync"
+	"time"
 )
 
 func (face *Face) Tracking(frame *Frame) {
@@ -13,13 +13,13 @@ func (face *Face) Tracking(frame *Frame) {
 	//截取视频
 	face.VideoWrite(frame)
 
-	//t := time.Now()
+	t := time.Now()
 
 	img := frame.ToSeetaImage(face.TargetRect)
 	faces := face.Seeta.Tracker.Track(img)
 
-	//log.Printf("faceTrack, count: %d, faceLen: %d, time: %d \n", frame.Count, len(faces), time.Since(t).Milliseconds())
 	if len(faces) > 0 {
+		log.Printf("faceTrack, count: %d, faceLen: %d, time: %d \n", frame.Count, len(faces), time.Since(t).Milliseconds())
 		if !face.TrackState.Tracking {
 			face.TrackState.Tracking = true
 			log.Println("人脸跟踪开始")
@@ -28,8 +28,6 @@ func (face *Face) Tracking(frame *Frame) {
 		if err := face.StartVideoWriter(float64(frame.Count)); err != nil {
 			log.Println("StartVideoWriter", err)
 		}
-
-		face.AddRecognize(frame)
 
 		//for i, info := range faces {
 		//	// 将人脸框的坐标转换到原图
@@ -55,40 +53,13 @@ func (face *Face) Tracking(frame *Frame) {
 				face.TrackState.EmptyCount = 0
 				face.TrackState.Tracking = false
 
-				face.StopTracking(frame.Count)
+				//face.StopTracking(frame.Count)
+				face.VideoWriterClose(frame.Count)
+
+				//
 			}
 		}
 	}
-}
-
-func (face *Face) AddRecognize(frame *Frame) {
-	if frame.Mat != nil {
-		mat := gocv.NewMat()
-		frame.Mat.CopyTo(&mat)
-		face.trackedBuffer <- &Frame{
-			Mat:   &mat,
-			Count: frame.Count,
-		}
-	} else {
-		face.trackedBuffer <- &Frame{
-			Count: frame.Count,
-		}
-	}
-}
-
-func (face *Face) StopTracking(count int) {
-	face.AddRecognize(&Frame{Count: count})
-}
-
-func (face *Face) CloseTrackedBuffer() {
-	close(face.trackedBuffer)
-}
-
-func (face *Face) ProcessRecognize(wg *sync.WaitGroup) {
-	for frame := range face.trackedBuffer {
-		face.Recognize(frame)
-	}
-	wg.Done()
 }
 
 func (face *Face) SetBestFrame(f *Frame) {

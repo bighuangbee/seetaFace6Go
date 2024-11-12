@@ -4,10 +4,8 @@ import (
 	"face_recognize/recognize/face_rec"
 	"gocv.io/x/gocv"
 	"image"
-	"log"
 	"seetaFace6go"
 	"sync"
-	"video-find-face/rec_gpu"
 	"video-find-face/seetaFace"
 )
 
@@ -19,9 +17,6 @@ type Face struct {
 	VideoInfo *VideoInfo
 
 	TrackState TrackState
-
-	//已跟踪到人脸的视频帧
-	trackedBuffer chan *Frame
 
 	//最佳图像
 	bestImage *Frame
@@ -52,21 +47,14 @@ func (frame *Frame) ToSeetaImage(targetRect image.Rectangle) (seetaImg *seetaFac
 	return seetaFace.ToSeetaImage(*frame.Mat, targetRect)
 }
 
-func NewFace(sFaceModel string, targetRect image.Rectangle) *Face {
-	var FaceFeature face_rec.IFaceFeature
-	var err error
-	FaceFeature, err = rec_gpu.New("/root/face_recognize/recognize/libs/face_gpu/models")
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func NewFace(targetRect image.Rectangle, FaceFeature face_rec.IFaceFeature) *Face {
+	sFaceModel := "../../seetaFace6Warp/seeta/models"
 	sFace := seetaFace.NewSeetaFace(sFaceModel, targetRect)
 
 	face := &Face{
-		RecognizeGpu:  FaceFeature,
-		Seeta:         sFace,
-		TargetRect:    targetRect,
-		trackedBuffer: make(chan *Frame, 3),
+		RecognizeGpu: FaceFeature,
+		Seeta:        sFace,
+		TargetRect:   targetRect,
 		TrackState: TrackState{
 			MaxEmptyCount: 15,
 		},
