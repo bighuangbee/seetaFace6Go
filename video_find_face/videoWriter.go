@@ -13,6 +13,8 @@ type VideoWriter struct {
 	Writer               *gocv.VideoWriter
 	videoname            string
 	startFrame, endFrame int
+	//在前追加
+	PreFrameCount int
 }
 
 func NewVideoFile(info *VideoInfo, startFrame, endFrame float64) (*gocv.VideoWriter, string, error) {
@@ -36,7 +38,6 @@ func NewVideoFile(info *VideoInfo, startFrame, endFrame float64) (*gocv.VideoWri
 }
 
 func (face *Face) VideoWriterClose(endFrame int) {
-
 	log.Printf("保存截取视频, 名称: %s, 帧率: %.2f fps, 总帧数: %0.1f, 开始帧: %d, 结束帧: %d\n",
 		filepath.Base(face.VideoWriter.videoname), face.VideoInfo.FPS, face.VideoInfo.TotalFrame, face.VideoWriter.startFrame, endFrame)
 
@@ -54,14 +55,14 @@ func (face *Face) VideoWriterClose(endFrame int) {
 }
 
 func (face *Face) StartVideoWriter(startFrame float64) (err error) {
+	if face.VideoWriter.Writer != nil {
+		return nil
+	}
 	face.muVideoWriter.Lock()
-	if face.VideoWriter.Writer == nil {
-		face.VideoWriter.Writer, face.VideoWriter.videoname, err = NewVideoFile(face.VideoInfo, startFrame, 0)
-		if err != nil {
-			face.muVideoWriter.Unlock()
-			return err
-		}
-
+	face.VideoWriter.Writer, face.VideoWriter.videoname, err = NewVideoFile(face.VideoInfo, startFrame, 0)
+	if err != nil {
+		face.muVideoWriter.Unlock()
+		return err
 	}
 	face.muVideoWriter.Unlock()
 

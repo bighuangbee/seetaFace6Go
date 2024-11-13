@@ -7,14 +7,15 @@ import (
 )
 
 func (face *Face) Tracking(frame *Frame) {
-
-	//帧缓存
-	face.AddFrameBuffer(frame)
-	//截取视频
-	face.VideoWrite(frame)
+	if face.TrackState.Tracking {
+		//截取视频
+		face.VideoWrite(frame)
+	} else {
+		//帧缓存
+		face.AddFrameBuffer(frame)
+	}
 
 	t := time.Now()
-
 	img := frame.ToSeetaImage(face.TargetRect)
 	faces := face.Seeta.Tracker.Track(img)
 
@@ -53,10 +54,9 @@ func (face *Face) Tracking(frame *Frame) {
 				face.TrackState.EmptyCount = 0
 				face.TrackState.Tracking = false
 
-				//face.StopTracking(frame.Count)
 				face.VideoWriterClose(frame.Count)
 
-				//
+				VideoRecTrim(face.VideoWriter.videoname)
 			}
 		}
 	}
@@ -89,7 +89,7 @@ func (face *Face) AddFrameBuffer(frame *Frame) {
 	frame.Mat.CopyTo(&mat)
 
 	//缓存x秒
-	if len(face.FrameBuffer) >= int(face.VideoInfo.FPS*2) {
+	if len(face.FrameBuffer) >= face.VideoWriter.PreFrameCount {
 		face.FrameBuffer[0].Mat.Close()
 		face.FrameBuffer = face.FrameBuffer[1:] // 去掉最早的帧
 	}

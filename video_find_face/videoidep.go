@@ -17,7 +17,6 @@ type VideoInfo struct {
 }
 
 func (videoInfo *VideoInfo) SaveVideo(startFrame, endFrame float64) (string, error) {
-	//savePath := filepath.Join("output", GetPathName(videoInfo.Name), filepath.Base(videoInfo.Name))
 	savePath := filepath.Join(filepath.Dir(videoInfo.Name), "output", filepath.Base(videoInfo.Name))
 	if err := os.MkdirAll(savePath, 0755); err != nil {
 		return "", err
